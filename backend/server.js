@@ -6,10 +6,12 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // Import routes
-const authRoutes = require('./routes/simpleAuth');
+const authRoutes = require('./routes/newAuth');
 const listingRoutes = require('./routes/simpleListings');
 const transactionRoutes = require('./routes/simpleTransactions');
 const adminRoutes = require('./routes/admin');
+const dashboardRoutes = require('./routes/dashboard');
+const sellerRoutes = require('./routes/seller');
 
 const app = express();
 const PORT = process.env.PORT || 5002;
@@ -28,24 +30,34 @@ app.use(limiter);
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   credentials: true
 }));
+
+// Static files
+app.use('/uploads', express.static('uploads'));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/waste2resource', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/waste2resource')
+.then(() => {
+  console.log('✅ MongoDB connected successfully');
+  console.log('📊 Database: waste2resource');
+  console.log('🔗 Connection: mongodb://localhost:27017/waste2resource');
+  console.log('💡 You can connect with MongoDB Compass using: mongodb://localhost:27017/waste2resource');
 })
-.then(() => console.log('MongoDB connected successfully'))
-.catch((err) => console.error('MongoDB connection error:', err));
+.catch((err) => {
+  console.error('❌ MongoDB connection error:', err);
+  console.log('💡 Make sure MongoDB is running on localhost:27017');
+  console.log('💡 You can start MongoDB with: mongod');
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/seller', sellerRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/admin', adminRoutes);

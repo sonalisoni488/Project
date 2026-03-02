@@ -1,33 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
-const Login = () => {
-  console.log('🔑 Login component mounted');
-  
+const Register = () => {
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: '',
+    role: 'buyer'
   });
-  const { login, isAuthenticated, error, clearError, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { register, isAuthenticated, error, clearError } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  console.log('🔑 Auth state:', { isAuthenticated, isLoading, error });
-
-  // Get redirect path from location state
-  const from = location.state?.from?.pathname || '/';
 
   // Redirect if already authenticated
   useEffect(() => {
-    console.log('🔑 Checking authentication, isAuthenticated:', isAuthenticated);
     if (isAuthenticated) {
-      console.log('🔑 Redirecting authenticated user to:', from);
-      navigate(from, { replace: true });
+      navigate('/', { replace: true });
     }
-  }, [isAuthenticated]); // Remove navigate and from dependencies
+  }, [isAuthenticated]); // Remove navigate dependency
 
   // Clear errors on component mount
   useEffect(() => {
@@ -42,42 +37,43 @@ const Login = () => {
     }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    return newErrors;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('🔥 Form submitted!');
     
+    console.log('📝 Frontend registration data:', formData);
+    
+    if (formData.password !== formData.confirmPassword) {
+      console.log('❌ Passwords do not match');
+      alert('Passwords do not match');
+      return;
+    }
+
+    console.log('✅ Form validation passed');
+    setIsLoading(true);
+
     try {
-      const result = await login(formData);
+      console.log('🚀 Sending registration request...');
+      const result = await register(formData);
+      console.log('✅ Registration response:', result);
       
       if (result.success) {
+        console.log('🎉 Registration successful, redirecting...');
         // Redirect based on user role
         if (result.user.role === 'seller') {
           navigate('/seller-dashboard', { replace: true });
         } else if (result.user.role === 'buyer') {
           navigate('/buyer-dashboard', { replace: true });
         } else {
-          navigate(from, { replace: true });
+          navigate('/', { replace: true });
         }
+      } else {
+        console.log('❌ Registration failed:', result.error);
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Registration error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -90,19 +86,19 @@ const Login = () => {
           <div>
             <div className="mx-auto h-12 w-12 bg-green-600 rounded-full flex items-center justify-center">
               <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
               </svg>
             </div>
             <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Sign in to your account
+              Create your account
             </h2>
             <p className="mt-2 text-center text-sm text-gray-600">
               Or{' '}
               <Link
-                to="/signup"
+                to="/login"
                 className="font-medium text-green-600 hover:text-green-500"
               >
-                create a new account
+                sign in to your existing account
               </Link>
             </p>
           </div>
@@ -116,6 +112,22 @@ const Login = () => {
             
             <div className="space-y-4">
               <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                  Full Name
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                   Email address
                 </label>
@@ -123,7 +135,6 @@ const Login = () => {
                   id="email"
                   name="email"
                   type="email"
-                  autoComplete="email"
                   required
                   value={formData.email}
                   onChange={handleChange}
@@ -131,7 +142,7 @@ const Login = () => {
                   placeholder="Enter your email"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Password
@@ -140,33 +151,44 @@ const Login = () => {
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
                   required
                   value={formData.password}
                   onChange={handleChange}
                   className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
-                  placeholder="Enter your password"
+                  placeholder="Create a password"
                 />
               </div>
-            </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                  Remember me
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  Confirm Password
                 </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  placeholder="Confirm your password"
+                />
               </div>
 
-              <div className="text-sm">
-                <a href="#" className="font-medium text-green-600 hover:text-green-500">
-                  Forgot your password?
-                </a>
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                  I want to
+                </label>
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                >
+                  <option value="buyer">Buy Waste Materials</option>
+                  <option value="seller">Sell Waste Materials</option>
+                </select>
               </div>
             </div>
 
@@ -174,6 +196,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={isLoading}
+                onClick={() => console.log('🔘 Button clicked!')}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 {isLoading ? (
@@ -182,10 +205,10 @@ const Login = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Signing in...
+                    Creating account...
                   </>
                 ) : (
-                  'Sign in'
+                  'Create Account'
                 )}
               </button>
             </div>
@@ -198,4 +221,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

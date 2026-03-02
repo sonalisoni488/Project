@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import { api } from '../services/api';
 
 // Initial state
 const initialState = {
@@ -107,19 +107,21 @@ export const AuthProvider = ({ children }) => {
   // Set auth token header
   const setAuthToken = (token) => {
     if (token) {
-      authAPI.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       localStorage.setItem('token', token);
     } else {
-      delete authAPI.defaults.headers.common['Authorization'];
+      delete api.defaults.headers.common['Authorization'];
       localStorage.removeItem('token');
     }
   };
 
   // Load user from token
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
+    console.log('🔐 loadUser called');
     const token = localStorage.getItem('token');
     
     if (!token) {
+      console.log('🔐 No token found, setting loading to false');
       dispatch({ type: AUTH_ACTIONS.LOAD_USER_FAILURE, payload: 'No token found' });
       return;
     }
@@ -128,21 +130,23 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.LOAD_USER_START });
 
     try {
-      const response = await authAPI.get('/auth/me');
+      console.log('🔐 Making API call to /auth/me');
+      const response = await api.get('/auth/me');
+      console.log('🔐 User data received:', response.data);
       dispatch({ type: AUTH_ACTIONS.LOAD_USER_SUCCESS, payload: response.data.user });
     } catch (error) {
-      console.error('Load user error:', error);
+      console.error('🔐 Load user error:', error);
       dispatch({ type: AUTH_ACTIONS.LOAD_USER_FAILURE, payload: error.response?.data?.message || 'Failed to load user' });
       setAuthToken(null);
     }
-  };
+  }, []);
 
   // Login user
   const login = async (credentials) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
 
     try {
-      const response = await authAPI.post('/auth/login', credentials);
+      const response = await api.post('/auth/login', credentials);
       const { token, user } = response.data;
       
       setAuthToken(token);
@@ -158,17 +162,22 @@ export const AuthProvider = ({ children }) => {
 
   // Register user
   const register = async (userData) => {
+    console.log('🔐 AuthContext register called with:', userData);
     dispatch({ type: AUTH_ACTIONS.REGISTER_START });
 
     try {
-      const response = await authAPI.post('/auth/register', userData);
+      console.log('📡 Making API request to register...');
+      const response = await api.post('/auth/register', userData);
+      console.log('📡 API response:', response.data);
       const { token, user } = response.data;
       
       setAuthToken(token);
       dispatch({ type: AUTH_ACTIONS.REGISTER_SUCCESS, payload: { token, user } });
       
+      console.log('✅ Registration successful in AuthContext');
       return { success: true, user };
     } catch (error) {
+      console.error('❌ AuthContext register error:', error);
       const message = error.response?.data?.message || 'Registration failed';
       dispatch({ type: AUTH_ACTIONS.REGISTER_FAILURE, payload: message });
       return { success: false, error: message };
@@ -178,7 +187,7 @@ export const AuthProvider = ({ children }) => {
   // Logout user
   const logout = async () => {
     try {
-      await authAPI.post('/auth/logout');
+      await api.post('/auth/logout');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -190,7 +199,7 @@ export const AuthProvider = ({ children }) => {
   // Update user profile
   const updateUser = async (userData) => {
     try {
-      const response = await authAPI.put('/auth/profile', userData);
+      const response = await api.put('/auth/profile', userData);
       dispatch({ type: AUTH_ACTIONS.UPDATE_USER, payload: response.data.user });
       return { success: true, user: response.data.user };
     } catch (error) {
@@ -202,7 +211,7 @@ export const AuthProvider = ({ children }) => {
   // Change password
   const changePassword = async (passwordData) => {
     try {
-      await authAPI.put('/auth/password', passwordData);
+      await api.put('/auth/password', passwordData);
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Password change failed';
@@ -211,9 +220,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Clear error
-  const clearError = () => {
+  const clearError = useCallback(() => {
+    console.log('🔐 clearError called');
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
-  };
+  }, []);
 
   // Check if user has specific role
   const hasRole = (role) => {
@@ -237,8 +247,9 @@ export const AuthProvider = ({ children }) => {
 
   // Initialize on mount
   useEffect(() => {
+    console.log('🔐 AuthContext mounted, calling loadUser');
     loadUser();
-  }, []);
+  }, []); // Remove loadUser dependency to prevent infinite loop
 
   const value = {
     ...state,

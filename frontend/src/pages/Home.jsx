@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
 const Home = () => {
+  const { isAuthenticated, user } = useAuth();
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -20,18 +22,37 @@ const Home = () => {
               Connect, Trade, and Build a Circular Economy
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/signup"
-                className="bg-green-600 text-white hover:bg-green-700 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
-              >
-                Get Started
-              </Link>
-              <Link
-                to="/marketplace"
-                className="bg-white text-green-600 hover:bg-green-50 border-2 border-green-600 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
-              >
-                Explore Marketplace
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    to={user?.role === 'seller' ? '/seller-dashboard' : '/buyer-dashboard'}
+                    className="bg-green-600 text-white hover:bg-green-700 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                  >
+                    Go to Dashboard
+                  </Link>
+                  <Link
+                    to="/marketplace"
+                    className="bg-white text-green-600 hover:bg-green-50 border-2 border-green-600 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                  >
+                    Explore Marketplace
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/register"
+                    className="bg-green-600 text-white hover:bg-green-700 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                  >
+                    Get Started
+                  </Link>
+                  <Link
+                    to="/marketplace"
+                    className="bg-white text-green-600 hover:bg-green-50 border-2 border-green-600 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                  >
+                    Explore Marketplace
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -161,24 +182,46 @@ const Home = () => {
       <section className="py-20 bg-green-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Ready to Join the Circular Economy?
+            {isAuthenticated ? `Welcome back, ${user?.name || 'User'}!` : 'Ready to Join the Circular Economy?'}
           </h2>
           <p className="text-xl text-green-100 mb-8">
-            Start turning waste into valuable resources today. Join thousands of businesses and individuals making a difference.
+            {isAuthenticated 
+              ? 'Continue your journey in turning waste into valuable resources. Manage your listings and connect with buyers.'
+              : 'Start turning waste into valuable resources today. Join thousands of businesses and individuals making a difference.'
+            }
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/signup"
-              className="bg-white text-green-600 hover:bg-gray-100 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
-            >
-              Sign Up Now
-            </Link>
-            <Link
-              to="/marketplace"
-              className="bg-transparent text-white hover:bg-green-700 border-2 border-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105"
-            >
-              Explore Marketplace
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to={user?.role === 'seller' ? '/seller-dashboard' : '/buyer-dashboard'}
+                  className="bg-white text-green-600 hover:bg-gray-100 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                >
+                  Go to Dashboard
+                </Link>
+                <Link
+                  to="/marketplace"
+                  className="bg-transparent text-white hover:bg-green-700 border-2 border-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105"
+                >
+                  Explore Marketplace
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/register"
+                  className="bg-white text-green-600 hover:bg-gray-100 px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
+                >
+                  Sign Up Now
+                </Link>
+                <Link
+                  to="/marketplace"
+                  className="bg-transparent text-white hover:bg-green-700 border-2 border-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105"
+                >
+                  Explore Marketplace
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

@@ -65,29 +65,40 @@ const Signup = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = validateForm();
-    
-    if (Object.keys(newErrors).length === 0) {
-      setIsLoading(true);
-      
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // For demo purposes, just navigate to marketplace
-        // In real app, you would handle registration here
-        console.log('Signup attempt:', formData);
-        navigate('/marketplace');
-      } catch (error) {
-        setErrors({ general: 'Registration failed. Please try again.' });
-      } finally {
-        setIsLoading(false);
+  e.preventDefault();
+  const newErrors = validateForm();
+
+  if (Object.keys(newErrors).length === 0) {
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5002/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
       }
-    } else {
-      setErrors(newErrors);
+
+      console.log('Signup success:', data);
+      navigate('/marketplace');
+
+    } catch (error) {
+      setErrors({ general: error.message });
+    } finally {
+      setIsLoading(false);
     }
-  };
+
+  } else {
+    setErrors(newErrors);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50">
