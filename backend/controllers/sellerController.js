@@ -59,38 +59,91 @@ const getListings = async (req, res) => {
 // @access  Private (seller only)
 const createListing = async (req, res) => {
   try {
-    console.log("Request Body:", req.body);
+    console.log('📝 Creating new listing...');
+    console.log('👤 User ID:', req.user?.id);
+    console.log('📋 Request headers:', req.headers);
+    console.log('📋 Request body:', req.body);
+    console.log('📋 Request file:', req.file);
+    console.log('📸 File info:', req.file ? {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      path: req.file.path
+    } : 'No file uploaded');
+    
+    // Extract fields with exact names from frontend
+    const { category, quantity, expectedPrice, description, location } = req.body;
 
-    const { title, wasteType, weight, price, description, location } = req.body;
-
-    if (!title || !wasteType || !weight || !price || !description || !location) {
+    // Validate all required fields
+    if (!category || !quantity || !expectedPrice || !description || !location) {
+      console.log('❌ Validation failed:', { category, quantity, expectedPrice, description, location });
       return res.status(400).json({
         success: false,
-        message: "Please provide all required fields"
+        message: 'Please provide all required fields'
       });
     }
 
-    let imageUrl = "/placeholder-image.jpg";
-
-    if (req.file) {
-      if (req.file.path && req.file.path.startsWith("http")) {
-        imageUrl = req.file.path;
-      } else if (req.file.filename) {
-        imageUrl = `/uploads/${req.file.filename}`;
-      }
+    // Validate weight limits
+    const weightValue = Number(quantity);
+    if (weightValue > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Weight cannot exceed 1000 kg. Please enter a value between 0.1 and 1000 kg.'
+      });
     }
 
-    const newListing = await WasteListing.create({
-      seller: req.user.id,   // ✅ correct field name
-      title,
-      wasteType,
-      weight: parseFloat(weight),
-      price: parseFloat(price),  // ✅ correct field
+    // Handle image upload
+    let imageUrl = '/placeholder-image.jpg';
+    if (req.file) {
+      // Handle both Cloudinary and local storage
+      if (req.file.path && req.file.path.startsWith('http')) {
+        // Cloudinary URL
+        imageUrl = req.file.path;
+        console.log('📸 Image uploaded to Cloudinary:', imageUrl);
+        console.log('📁 Cloudinary folder check - URL contains folder?', imageUrl.includes('waste2resource'));
+      } else if (req.file.filename) {
+        // Local storage
+        imageUrl = `/uploads/${req.file.filename}`;
+        console.log('📁 Image saved locally:', imageUrl);
+      }
+      
+      // Debug: Show full file object
+      console.log('🔍 Full file object:', {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        path: req.file.path,
+        filename: req.file.filename,
+        url: req.file.url,
+        secure_url: req.file.secure_url
+      });
+    }
+
+    // Convert lowercase category to proper enum value
+    let capitalizedCategory;
+    if (category.toLowerCase() === 'e-waste' || category.toLowerCase() === 'ewaste') {
+      capitalizedCategory = 'E-waste'; // Special case for E-waste (handle both 'ewaste' and 'e-waste')
+    } else {
+      capitalizedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+    }
+    console.log('🔄 Converting category:', category, '->', capitalizedCategory);
+
+    // Create new listing with mapped fields
+    const newListing = new WasteListing({
+      sellerId: req.user.id,
+      title: category,                    // title → category
+      wasteType: capitalizedCategory,     // wasteType → category (proper enum format)
+      weight: Number(quantity),            // weight → quantity (convert to Number)
+      price: Number(expectedPrice),          // price → expectedPrice (convert to Number)
+      suggestedPrice: Number(expectedPrice), // suggestedPrice required field
+      aiConfidence: 95,                  // aiConfidence required field
       description,
-      imageUrl,
+      imageUrl: imageUrl,                  // imageUrl → from req.file
       location,
       status: "available"
     });
+
+    await newListing.save();
 
     res.status(201).json({
       success: true,
@@ -114,11 +167,24 @@ const updateListing = async (req, res) => {
     const { id } = req.params;
     const { category, quantity, expectedPrice, description, location } = req.body;
 
-    // Find and update listing
+    // Find and update listing with field mapping
     const updateData = {};
-    if (category) updateData.wasteType = category;
-    if (quantity) updateData.weight = parseFloat(quantity);
-    if (expectedPrice) updateData.finalPrice = parseFloat(expectedPrice);
+    if (category) {
+      updateData.title = category;           // Convert lowercase category to proper enum value
+      let capitalizedCategory;
+      if (category.toLowerCase() === 'e-waste' || category.toLowerCase() === 'ewaste') {
+        capitalizedCategory = 'E-waste'; // Special case for E-waste (handle both 'ewaste' and 'e-waste')
+      } else {
+        capitalizedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+      }
+      console.log('🔄 Converting category:', category, '->', capitalizedCategory);
+      updateData.wasteType = capitalizedCategory;
+    }
+    if (quantity) updateData.weight = Number(quantity);      // weight → quantity (convert to Number)
+    if (expectedPrice) {
+      updateData.price = Number(expectedPrice); // price → expectedPrice (convert to Number)
+      updateData.suggestedPrice = Number(expectedPrice); // suggestedPrice required field
+    }
     if (description) updateData.description = description;
     if (location) updateData.location = location;
     if (req.file) {

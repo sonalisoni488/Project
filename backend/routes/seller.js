@@ -27,7 +27,33 @@ router.get('/listings', getListings);
 // @route   POST /api/seller/listings
 // @desc    Create new waste listing
 // @access  Private (seller only)
-router.post('/listings', upload.single('image'), createListing);
+router.post('/listings', (req, res, next) => {
+  console.log('🔍 POST /api/seller/listings route hit');
+  console.log('🔍 Request headers:', req.headers);
+  console.log('🔍 Content-Type:', req.headers['content-type']);
+  next();
+}, upload.single('image'), (req, res, next) => {
+  console.log('🔍 After multer middleware');
+  console.log('🔍 req.file:', req.file);
+  console.log('🔍 req.body:', req.body);
+  
+  // Check if multer failed
+  if (!req.file && req.headers['content-type']?.includes('multipart/form-data')) {
+    console.log('❌ Multer failed to process file');
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to process uploaded file'
+    });
+  }
+  
+  next();
+}, (error, req, res, next) => {
+  console.error('❌ Middleware error:', error);
+  res.status(500).json({
+    success: false,
+    message: error.message || 'Internal server error during file processing'
+  });
+}, createListing);
 
 // @route   PUT /api/seller/listings/:id
 // @desc    Update waste listing
