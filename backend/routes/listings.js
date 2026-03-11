@@ -170,12 +170,38 @@ router.post('/', protect, authorize('seller'), upload.single('image'), validateW
 // @access  Public
 router.get('/', optionalAuth, async (req, res) => {
   try {
+    console.log('=== MARKETPLACE API HIT ===');
+    console.log('Request query params:', req.query);
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     const skip = (page - 1) * limit;
 
     // Build search query
     const searchQuery = { status: 'available' };
+
+    // DEBUG: Check what's in the database
+    console.log('=== DEBUG MARKETPLACE LISTINGS ===');
+    console.log('Search query:', searchQuery);
+    
+    // Check all listings without any filter
+    const allListings = await WasteListing.find({});
+    console.log('Total listings in DB:', allListings.length);
+    if (allListings.length > 0) {
+      console.log('Sample listing structure:', JSON.stringify(allListings[0], null, 2));
+      console.log('Status values in DB:', allListings.map(l => l.status));
+    }
+    
+    // Check with the actual search query
+    const filteredListings = await WasteListing.find(searchQuery);
+    console.log('Listings matching search query:', filteredListings.length);
+    if (filteredListings.length === 0 && allListings.length > 0) {
+      console.log('QUERY ISSUE: Listings exist but dont match search query');
+      console.log('Expected status: "available"');
+      console.log('Actual statuses:', allListings.map(l => l.status));
+    }
 
     // Filter by waste type
     if (req.query.wasteType) {
@@ -254,7 +280,11 @@ router.get('/', optionalAuth, async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    console.log('Final query result:', listings.length);
+    console.log('Final search query:', JSON.stringify(searchQuery, null, 2));
+
     const total = await WasteListing.countDocuments(searchQuery);
+    console.log('Total count:', total);
 
     // Increment view count for viewed listings (if authenticated)
     if (req.user && req.query.viewed) {
@@ -265,24 +295,41 @@ router.get('/', optionalAuth, async (req, res) => {
       );
     }
 
+    console.log('=== END DEBUG MARKETPLACE LISTINGS ===');
+
+    // TEMPORARY: Test with no filters at all
+    console.log('=== TESTING NO FILTERS ===');
+    const noFilterListings = await WasteListing.find({}).limit(5);
+    console.log('Listings with no filters:', noFilterListings.length);
+    if (noFilterListings.length > 0) {
+      console.log('Sample listing (no filter):', JSON.stringify(noFilterListings[0], null, 2));
+    }
+
     res.json({
-      message: 'Listings retrieved successfully',
-      listings,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      },
-      filters: {
-        wasteType: req.query.wasteType,
-        location: req.query.location,
-        minPrice: req.query.minPrice,
-        maxPrice: req.query.maxPrice,
-        minWeight: req.query.minWeight,
-        maxWeight: req.query.maxWeight,
-        condition: req.query.condition,
-        sort: req.query.sort
+      success: true,
+      data: {
+        listings,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        },
+        filters: {
+          wasteType: req.query.wasteType,
+          location: req.query.location,
+          minPrice: req.query.minPrice,
+          maxPrice: req.query.maxPrice,
+          minWeight: req.query.minWeight,
+          maxWeight: req.query.maxWeight,
+          condition: req.query.condition,
+          sort: req.query.sort
+        },
+        debug: {
+          totalListingsInDb: allListings.length,
+          filteredCount: filteredListings.length,
+          noFilterCount: noFilterListings.length
+        }
       }
     });
   } catch (error) {

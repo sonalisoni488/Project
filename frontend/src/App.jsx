@@ -8,6 +8,9 @@ import Register from './pages/Register';
 import Marketplace from './pages/Marketplace';
 import SellerDashboard from './pages/SellerDashboard';
 import BuyerDashboard from './pages/BuyerDashboard';
+import SalesAnalytics from './pages/SalesAnalytics';
+import Earnings from './pages/Earnings';
+import BuyerOffers from './pages/BuyerOffers';
 
 function App() {
   return (
@@ -35,6 +38,32 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="buyer">
                   <BuyerDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Seller Dashboard Section Routes */}
+            <Route 
+              path="/sales-analytics" 
+              element={
+                <ProtectedRoute requiredRole="seller">
+                  <SalesAnalytics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/earnings" 
+              element={
+                <ProtectedRoute requiredRole="seller">
+                  <Earnings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/buyer-offers" 
+              element={
+                <ProtectedRoute requiredRole="seller">
+                  <BuyerOffers />
                 </ProtectedRoute>
               } 
             />

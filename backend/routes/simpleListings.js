@@ -62,6 +62,11 @@ const uploadImage = async (file) => {
 // @access   Public
 router.get('/', async (req, res) => {
   try {
+    console.log('=== MARKETPLACE API HIT (simpleListings) ===');
+    console.log('Request query params:', req.query);
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    
     const {
       wasteType,
       location,
@@ -83,6 +88,27 @@ router.get('/', async (req, res) => {
       if (maxPrice) searchQuery.price.$lte = parseFloat(maxPrice);
     }
 
+    // DEBUG: Check what's in the database
+    console.log('=== DEBUG MARKETPLACE LISTINGS (simpleListings) ===');
+    console.log('Search query:', searchQuery);
+    
+    // Check all listings without any filter
+    const allListings = await Listing.find({});
+    console.log('Total listings in DB (Listing model):', allListings.length);
+    if (allListings.length > 0) {
+      console.log('Sample listing structure:', JSON.stringify(allListings[0], null, 2));
+      console.log('Status values in DB:', allListings.map(l => l.status));
+    }
+    
+    // Check with the actual search query
+    const filteredListings = await Listing.find(searchQuery);
+    console.log('Listings matching search query:', filteredListings.length);
+    if (filteredListings.length === 0 && allListings.length > 0) {
+      console.log('QUERY ISSUE: Listings exist but dont match search query');
+      console.log('Expected status: "available"');
+      console.log('Actual statuses:', allListings.map(l => l.status));
+    }
+
     // Get total count for pagination
     const total = await Listing.countDocuments(searchQuery);
 
@@ -93,6 +119,9 @@ router.get('/', async (req, res) => {
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
 
+    console.log('Final query result:', listings.length);
+    console.log('=== END DEBUG MARKETPLACE LISTINGS (simpleListings) ===');
+
     res.json({
       success: true,
       data: {
@@ -102,6 +131,11 @@ router.get('/', async (req, res) => {
           limit: parseInt(limit),
           total,
           pages: Math.ceil(total / parseInt(limit))
+        },
+        debug: {
+          totalListingsInDb: allListings.length,
+          filteredCount: filteredListings.length,
+          finalResultCount: listings.length
         }
       }
     });

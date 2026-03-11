@@ -1,114 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ListingCard from '../components/ListingCard';
-
-// Dummy data for marketplace
-const dummyListings = [
-  {
-    id: 1,
-    wasteType: 'Plastic Bottles',
-    description: 'Clean plastic bottles available for recycling. Perfect for manufacturing new plastic products.',
-    weight: '500 kg',
-    price: '$150',
-    location: 'New York, NY',
-    status: 'Available',
-    image: 'https://via.placeholder.com/400x300?text=Plastic+Bottles',
-    createdAt: '2024-01-15'
-  },
-  {
-    id: 2,
-    wasteType: 'Cardboard Boxes',
-    description: 'High-quality cardboard boxes in good condition. Suitable for packaging and storage.',
-    weight: '200 kg',
-    price: '$80',
-    location: 'Los Angeles, CA',
-    status: 'Available',
-    image: 'https://via.placeholder.com/400x300?text=Cardboard+Boxes',
-    createdAt: '2024-01-14'
-  },
-  {
-    id: 3,
-    wasteType: 'Metal Scrap',
-    description: 'Mixed metal scrap including aluminum, steel, and copper. Great for recycling.',
-    weight: '750 kg',
-    price: '$450',
-    location: 'Chicago, IL',
-    status: 'Available',
-    image: 'https://via.placeholder.com/400x300?text=Metal+Scrap',
-    createdAt: '2024-01-13'
-  },
-  {
-    id: 4,
-    wasteType: 'Glass Bottles',
-    description: 'Clean glass bottles in various sizes. Perfect for glass recycling projects.',
-    weight: '300 kg',
-    price: '$120',
-    location: 'Houston, TX',
-    status: 'Available',
-    image: 'https://via.placeholder.com/400x300?text=Glass+Bottles',
-    createdAt: '2024-01-12'
-  },
-  {
-    id: 5,
-    wasteType: 'Wood Pallets',
-    description: 'Used wooden pallets in good condition. Can be refurbished or used for projects.',
-    weight: '100 kg',
-    price: '$60',
-    location: 'Phoenix, AZ',
-    status: 'Available',
-    image: 'https://via.placeholder.com/400x300?text=Wood+Pallets',
-    createdAt: '2024-01-11'
-  },
-  {
-    id: 6,
-    wasteType: 'Electronic Waste',
-    description: 'Old electronics and computer parts. Contains valuable metals for recycling.',
-    weight: '150 kg',
-    price: '$300',
-    location: 'Philadelphia, PA',
-    status: 'Available',
-    image: 'https://via.placeholder.com/400x300?text=Electronic+Waste',
-    createdAt: '2024-01-10'
-  },
-  {
-    id: 7,
-    wasteType: 'Paper Waste',
-    description: 'Mixed paper and newspaper waste. Good for paper recycling.',
-    weight: '400 kg',
-    price: '$100',
-    location: 'San Antonio, TX',
-    status: 'Available',
-    image: 'https://via.placeholder.com/400x300?text=Paper+Waste',
-    createdAt: '2024-01-09'
-  },
-  {
-    id: 8,
-    wasteType: 'Textile Waste',
-    description: 'Used clothing and fabric scraps. Suitable for textile recycling.',
-    weight: '250 kg',
-    price: '$90',
-    location: 'San Diego, CA',
-    status: 'Available',
-    image: 'https://via.placeholder.com/400x300?text=Textile+Waste',
-    createdAt: '2024-01-08'
-  }
-];
+import { api } from '../services/api';
+import { Search, Filter, Package } from 'lucide-react';
 
 const Marketplace = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
+  const [listings, setListings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const categories = [
     { value: 'all', label: 'All Categories' },
-    { value: 'plastic', label: 'Plastic' },
-    { value: 'paper', label: 'Paper' },
-    { value: 'metal', label: 'Metal' },
-    { value: 'glass', label: 'Glass' },
-    { value: 'wood', label: 'Wood' },
-    { value: 'textile', label: 'Textile' },
-    { value: 'electronic', label: 'Electronic' }
+    { value: 'Plastic', label: 'Plastic' },
+    { value: 'Paper', label: 'Paper' },
+    { value: 'Metal', label: 'Metal' },
+    { value: 'Glass', label: 'Glass' },
+    { value: 'Construction', label: 'Construction' },
+    { value: 'E-waste', label: 'E-waste' },
+    { value: 'Organic', label: 'Organic' },
+    { value: 'Textile', label: 'Textile' }
   ];
 
   const sortOptions = [
@@ -118,28 +32,103 @@ const Marketplace = () => {
     { value: 'weight-high', label: 'Weight: High to Low' }
   ];
 
+  useEffect(() => {
+    fetchListings();
+  }, []);
+
+  const fetchListings = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get('/listings');
+      
+      console.log('API Response:', response);
+      console.log('Response data:', response.data);
+      
+      // Handle the exact response structure: {success: true, data: {listings: Array, pagination: {...}}}
+      let listingsData = [];
+      if (response.data && response.data.success && response.data.data && Array.isArray(response.data.data.listings)) {
+        listingsData = response.data.data.listings;
+        console.log('Extracted listings:', listingsData);
+      } else {
+        console.error('Unexpected response structure:', response.data);
+        // Try alternative extraction methods
+        if (response.data && Array.isArray(response.data.listings)) {
+          listingsData = response.data.listings;
+          console.log('Extracted listings (alternative):', listingsData);
+        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          listingsData = response.data.data;
+          console.log('Extracted listings (direct):', listingsData);
+        } else {
+          setError('Invalid response format from server');
+          return;
+        }
+      }
+      
+      // Filter only available listings for marketplace
+      const availableListings = listingsData.filter(listing => listing.status === 'available');
+      console.log('Available listings:', availableListings);
+      setListings(availableListings);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+      setError('Failed to load listings. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Filter and sort listings
-  const filteredListings = dummyListings
+  const filteredListings = listings
     .filter(listing => {
-      const matchesSearch = listing.wasteType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           listing.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = listing.wasteType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           listing.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           listing.location?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || 
-                            listing.wasteType.toLowerCase().includes(selectedCategory.toLowerCase());
+                            listing.wasteType?.toLowerCase() === selectedCategory.toLowerCase();
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'price-low':
-          return parseInt(a.price.replace('$', '')) - parseInt(b.price.replace('$', ''));
+          return (a.finalPrice || a.suggestedPrice || 0) - (b.finalPrice || b.suggestedPrice || 0);
         case 'price-high':
-          return parseInt(b.price.replace('$', '')) - parseInt(a.price.replace('$', ''));
+          return (b.finalPrice || b.suggestedPrice || 0) - (a.finalPrice || a.suggestedPrice || 0);
         case 'weight-high':
-          return parseInt(b.weight.replace('kg', '')) - parseInt(a.weight.replace('kg', ''));
+          return (b.weight || 0) - (a.weight || 0);
         case 'newest':
         default:
           return new Date(b.createdAt) - new Date(a.createdAt);
       }
     });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading marketplace listings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Load Listings</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchListings}
+            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -222,7 +211,7 @@ const Marketplace = () => {
 
           {/* Results Count */}
           <div className="mt-4 text-sm text-gray-600">
-            Showing {filteredListings.length} of {dummyListings.length} listings
+            Showing {filteredListings.length} of {listings.length} listings
           </div>
         </div>
       </div>

@@ -588,6 +588,31 @@ const SellerDashboard = () => {
     }
   };
 
+  // Navigation handlers for sidebar menu items
+  const handleNavigation = (page) => {
+    // Close sidebar on mobile after navigation
+    setSidebarOpen(false);
+    
+    // Navigate to different seller pages
+    switch(page) {
+      case 'listings':
+        // Stay on current page - just refresh
+        window.location.reload();
+        break;
+      case 'analytics':
+        navigate('/sales-analytics');
+        break;
+      case 'earnings':
+        navigate('/earnings');
+        break;
+      case 'offers':
+        navigate('/buyer-offers');
+        break;
+      default:
+        navigate('/seller-dashboard');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -602,7 +627,7 @@ const SellerDashboard = () => {
       
       <div className="flex">
         {/* Sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-0 md:flex md:flex-col h-screen`}>
+        <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out md:translate-x-0 md:flex md:flex-col h-screen`}>
           <div className="flex items-center justify-between h-16 px-4 border-b flex-shrink-0">
             <h2 className="text-lg font-semibold text-gray-800">Seller Dashboard</h2>
             <button
@@ -617,19 +642,31 @@ const SellerDashboard = () => {
             <nav className="flex-1 overflow-y-auto">
               <div className="px-4 space-y-2">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Menu</h3>
-                <button className="w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors">
+                <button 
+                  onClick={() => handleNavigation('listings')}
+                  className="w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors"
+                >
                   <Package className="w-5 h-5" />
                   <span>My Listings</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors">
+                <button 
+                  onClick={() => handleNavigation('analytics')}
+                  className="w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors"
+                >
                   <TrendingUp className="w-5 h-5" />
                   <span>Sales Analytics</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors">
+                <button 
+                  onClick={() => handleNavigation('earnings')}
+                  className="w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors"
+                >
                   <DollarSign className="w-5 h-5" />
                   <span>Earnings</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors">
+                <button 
+                  onClick={() => handleNavigation('offers')}
+                  className="w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors"
+                >
                   <Users className="w-5 h-5" />
                   <span>Buyer Offers</span>
                 </button>
@@ -649,7 +686,7 @@ const SellerDashboard = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 md:ml-0">
+        <div className="flex-1 md:ml-64 min-h-screen">
           {/* Mobile Header */}
           <div className="md:hidden flex items-center justify-between h-16 px-4 bg-white border-b">
             <button
