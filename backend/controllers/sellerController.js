@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { upload } = require('../config/cloudinary');
-const WasteListing = require('../models/WasteListing');
+const Listing = require('../models/Listing');
 
 // @desc    Get seller dashboard data
 // @route   GET /api/seller/dashboard
@@ -38,7 +38,7 @@ const getDashboardData = async (req, res) => {
 // @access  Private (seller only)
 const getListings = async (req, res) => {
   try {
-    const listings = await WasteListing.find({ sellerId: req.user.id })
+    const listings = await Listing.find({ seller: req.user.id })
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -73,19 +73,29 @@ const createListing = async (req, res) => {
     } : 'No file uploaded');
     
     // Extract fields with exact names from frontend
-    const { category, quantity, expectedPrice, description, location } = req.body;
+    const { title, wasteType, weight, price, description, location } = req.body;
+
+    console.log('🔍 Extracted fields:', { title, wasteType, weight, price, description, location });
 
     // Validate all required fields
-    if (!category || !quantity || !expectedPrice || !description || !location) {
-      console.log('❌ Validation failed:', { category, quantity, expectedPrice, description, location });
+    if (!title || !wasteType || !weight || !price || !description || !location) {
+      console.log('❌ Validation failed:', { title, wasteType, weight, price, description, location });
       return res.status(400).json({
         success: false,
         message: 'Please provide all required fields'
       });
     }
 
+    // Validate title
+    if (title.trim().length < 2 || title.trim().length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title must be between 2 and 100 characters'
+      });
+    }
+
     // Validate weight limits
-    const weightValue = Number(quantity);
+    const weightValue = Number(weight);
     if (weightValue > 1000) {
       return res.status(400).json({
         success: false,
@@ -119,31 +129,45 @@ const createListing = async (req, res) => {
       });
     }
 
-    // Convert lowercase category to proper enum value
+    // Convert lowercase wasteType to proper enum value
     let capitalizedCategory;
-    if (category.toLowerCase() === 'e-waste' || category.toLowerCase() === 'ewaste') {
+    if (wasteType.toLowerCase() === 'e-waste' || wasteType.toLowerCase() === 'ewaste') {
       capitalizedCategory = 'E-waste'; // Special case for E-waste (handle both 'ewaste' and 'e-waste')
     } else {
-      capitalizedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+      capitalizedCategory = wasteType.charAt(0).toUpperCase() + wasteType.slice(1);
     }
-    console.log('🔄 Converting category:', category, '->', capitalizedCategory);
+    console.log('🔄 Converting wasteType:', wasteType, '->', capitalizedCategory);
 
     // Create new listing with mapped fields
-    const newListing = new WasteListing({
-      sellerId: req.user.id,
-      title: category,                    // title → category
-      wasteType: capitalizedCategory,     // wasteType → category (proper enum format)
-      weight: Number(quantity),            // weight → quantity (convert to Number)
-      price: Number(expectedPrice),          // price → expectedPrice (convert to Number)
-      suggestedPrice: Number(expectedPrice), // suggestedPrice required field
-      aiConfidence: 95,                  // aiConfidence required field
+    console.log('🔍 Creating listing with data:', {
+      seller: req.user.id,
+      title: title.trim(),
+      wasteType: capitalizedCategory,
+      weight: Number(weight),
+      price: Number(price),
       description,
-      imageUrl: imageUrl,                  // imageUrl → from req.file
+      imageUrl: imageUrl,
       location,
       status: "available"
     });
 
+    const newListing = new Listing({
+      seller: req.user.id,
+      title: title.trim(),
+      wasteType: capitalizedCategory,
+      weight: Number(weight),
+      price: Number(price),
+      description,
+      imageUrl: imageUrl,
+      location,
+      status: "available"
+    });
+
+    console.log('🔍 About to save listing...');
+
     await newListing.save();
+
+    console.log('✅ Listing saved successfully:', newListing._id);
 
     res.status(201).json({
       success: true,
@@ -200,8 +224,8 @@ const updateListing = async (req, res) => {
       }
     }
 
-    const updatedListing = await WasteListing.findOneAndUpdate(
-      { _id: id, sellerId: req.user.id },
+    const updatedListing = await Listing.findOneAndUpdate(
+      { _id: id, seller: req.user.id },
       updateData,
       { new: true, runValidators: true }
     );
@@ -236,9 +260,9 @@ const deleteListing = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedListing = await WasteListing.findOneAndDelete({
+    const deletedListing = await Listing.findOneAndDelete({
       _id: id,
-      sellerId: req.user.id
+      seller: req.user.id
     });
 
     if (!deletedListing) {

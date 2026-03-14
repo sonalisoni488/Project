@@ -153,8 +153,43 @@ router.get('/', async (req, res) => {
 // @access   Public
 router.get('/:id', async (req, res) => {
   try {
+    console.log('🔍 Fetching listing with ID:', req.params.id);
+    
+    // First, get the listing without populate to check the seller ID
+    const listingWithoutPopulate = await Listing.findById(req.params.id);
+    console.log('🔍 Listing without populate:', !!listingWithoutPopulate);
+    console.log('🔍 Seller ID from listing:', listingWithoutPopulate?.seller);
+    
+    // Now try to populate with explicit field selection
     const listing = await Listing.findById(req.params.id)
-      .populate('seller', 'name location');
+      .populate({
+        path: 'seller',
+        select: 'name location email phone'
+      });
+
+    console.log('🔍 Listing found:', !!listing);
+    console.log('🔍 Seller data after populate:', listing?.seller);
+    console.log('🔍 Seller email:', listing?.seller?.email);
+    console.log('🔍 Seller phone:', listing?.seller?.phone);
+
+    // Also check the user directly
+    if (listingWithoutPopulate?.seller) {
+      const User = require('../models/User');
+      const directUser = await User.findById(listingWithoutPopulate.seller);
+      console.log('🔍 Direct user query result:', !!directUser);
+      console.log('🔍 Direct user email:', directUser?.email);
+      console.log('🔍 Direct user name:', directUser?.name);
+      
+      // Manual fix: If populate didn't work, manually add user data
+      if (!listing?.seller?.email && directUser) {
+        listing.seller = {
+          ...listing.seller,
+          email: directUser.email,
+          phone: directUser.phone
+        };
+        console.log('🔍 Manually added email to seller data');
+      }
+    }
 
     if (!listing) {
       return res.status(404).json({
@@ -205,6 +240,10 @@ router.post('/', protect, authorize('seller'), upload.single('image'), [
     .withMessage('Location must be between 2 and 100 characters')
 ], async (req, res) => {
   try {
+    console.log('🚀 POST /api/listings route hit');
+    console.log('🔍 Request headers:', req.headers);
+    console.log('🔍 Request body keys:', Object.keys(req.body));
+    console.log('🔍 Request body:', req.body);
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -215,13 +254,33 @@ router.post('/', protect, authorize('seller'), upload.single('image'), [
       });
     }
 
+    // Debug: Check file upload
+    console.log('🔍 File upload debug:');
+    console.log('  - req.file:', req.file);
+    console.log('  - req.files:', req.files);
+    console.log('  - Content-Type:', req.headers['content-type']);
+    console.log('  - Content-Length:', req.headers['content-length']);
+
     // Check if image was uploaded
     if (!req.file) {
+      console.log('❌ No file received in req.file');
+      console.log('❌ Request headers:', {
+        'content-type': req.headers['content-type'],
+        'content-length': req.headers['content-length'],
+        'authorization': req.headers.authorization ? 'Bearer ***' : 'None'
+      });
       return res.status(400).json({
         success: false,
         message: 'Image is required'
       });
     }
+
+    console.log('✅ File received:', {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
 
     const { title, wasteType, weight, price, description, location } = req.body;
 
@@ -241,7 +300,6 @@ router.post('/', protect, authorize('seller'), upload.single('image'), [
     // Create listing
     const listing = await Listing.create({
       seller: req.user._id,
-      title,
       wasteType,
       weight: parseFloat(weight),
       price: parseFloat(price),

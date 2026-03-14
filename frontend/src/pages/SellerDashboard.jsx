@@ -20,7 +20,8 @@ import {
   Users,
   LogOut,
   Tag,
-  Image
+  Image,
+  FileText
 } from 'lucide-react';
 
 const SellerDashboard = () => {
@@ -32,9 +33,10 @@ const SellerDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [formData, setFormData] = useState({
-    category: 'plastic',
-    quantity: '',
-    expectedPrice: '',
+    title: '',
+    wasteType: 'plastic',
+    weight: '',
+    price: '',
     description: '',
     location: '',
     image: null
@@ -332,7 +334,7 @@ const SellerDashboard = () => {
       setFormData(prev => ({ ...prev, [name]: value }));
       
       // Real-time validation feedback
-      if (name === 'quantity') {
+      if (name === 'weight') {
         const weight = parseFloat(value);
         if (weight > 1000) {
           showWarningToast('⚖️ Weight exceeds 1000 kg limit!');
@@ -341,7 +343,7 @@ const SellerDashboard = () => {
         }
       }
       
-      if (name === 'expectedPrice') {
+      if (name === 'price') {
         const price = parseFloat(value);
         if (price < 0) {
           showWarningToast('💰 Price cannot be negative!');
@@ -354,22 +356,32 @@ const SellerDashboard = () => {
     e.preventDefault();
     
     // Pre-submission validation
-    if (!formData.category) {
-      showErrorToast('📂 Please select a waste category!');
+    if (!formData.title || formData.title.trim().length < 2) {
+      showErrorToast('📝 Please enter a title (at least 2 characters)!');
       return;
     }
     
-    if (!formData.quantity || parseFloat(formData.quantity) <= 0) {
+    if (formData.title.trim().length > 100) {
+      showErrorToast('📝 Title cannot exceed 100 characters!');
+      return;
+    }
+    
+    if (!formData.wasteType) {
+      showErrorToast('📂 Please select a waste wasteType!');
+      return;
+    }
+    
+    if (!formData.weight || parseFloat(formData.weight) <= 0) {
       showErrorToast('⚖️ Please enter a valid weight!');
       return;
     }
     
-    if (parseFloat(formData.quantity) > 1000) {
+    if (parseFloat(formData.weight) > 1000) {
       showErrorToast('⚖️ Weight cannot exceed 1000 kg!');
       return;
     }
     
-    if (!formData.expectedPrice || parseFloat(formData.expectedPrice) < 0) {
+    if (!formData.price || parseFloat(formData.price) < 0) {
       showErrorToast('💰 Please enter a valid price!');
       return;
     }
@@ -394,9 +406,10 @@ const SellerDashboard = () => {
       console.log('🔧 Creating FormData from scratch...');
       
       // Add fields one by one to ensure they're properly added
-      formDataToSend.append("category", formData.category);
-      formDataToSend.append("quantity", formData.quantity);
-      formDataToSend.append("expectedPrice", formData.expectedPrice);
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("wasteType", formData.wasteType);
+      formDataToSend.append("weight", formData.weight);
+      formDataToSend.append("price", formData.price);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("location", formData.location);
 
@@ -457,15 +470,16 @@ const SellerDashboard = () => {
       console.log('✅ Response received:', response.data);
 
       // Show success toast with more details
-      showSuccessToast(`Listing created successfully! Your ${formData.category} waste listing is now live.`);
+      showSuccessToast(`Listing created successfully! Your ${formData.wasteType} waste listing is now live.`);
 
       fetchListings();
       setShowAddListing(false);
       setEditingListing(null);
       setFormData({
-        category: "plastic",
-        quantity: "",
-        expectedPrice: "",
+        title: '',
+        wasteType: "plastic",
+        weight: "",
+        price: "",
         description: "",
         location: "",
         image: null
@@ -494,9 +508,9 @@ const SellerDashboard = () => {
             if (message.includes('Weight cannot exceed')) {
               errorMessage = "⚖️ Weight too heavy! Maximum allowed is 1000 kg. Please enter a smaller weight.";
             }
-            // Category validation errors
+            // wasteType validation errors
             else if (message.includes('not a valid enum value')) {
-              errorMessage = "📂 Invalid category! Please select a valid waste category from the dropdown.";
+              errorMessage = "📂 Invalid wasteType! Please select a valid waste wasteType from the dropdown.";
             }
             // Required field errors
             else if (message.includes('required')) {
@@ -558,9 +572,10 @@ const SellerDashboard = () => {
   const handleEditListing = (listing) => {
     setEditingListing(listing);
     setFormData({
-      category: listing.wasteType,
-      quantity: listing.weight,
-      expectedPrice: listing.finalPrice,
+      title: listing.title || '',
+      wasteType: listing.wasteType,
+      weight: listing.weight,
+      price: listing.finalPrice,
       description: listing.description,
       location: listing.location,
       image: null
@@ -821,10 +836,7 @@ const SellerDashboard = () => {
 
                         {/* Title */}
                         <h3 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
-                          {listing.description ? 
-                            listing.description.split(' ').slice(0, 6).join(' ') + (listing.description.split(' ').length > 6 ? '...' : '') 
-                            : `${listing.wasteType} Material`
-                          }
+                          {listing.title || `${listing.wasteType} Material`}
                         </h3>
 
                         {/* Description */}
@@ -892,12 +904,28 @@ const SellerDashboard = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <FileText className="w-4 h-4 inline mr-1" />
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      placeholder="Enter listing title"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       <Tag className="w-4 h-4 inline mr-1" />
-                      Waste Category
+                      Waste wasteType
                     </label>
                     <select
-                      name="category"
-                      value={formData.category}
+                      name="wasteType"
+                      value={formData.wasteType}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       required
@@ -910,12 +938,12 @@ const SellerDashboard = () => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Quantity (kg)
+                      weight (kg)
                     </label>
                     <input
                       type="number"
-                      name="quantity"
-                      value={formData.quantity}
+                      name="weight"
+                      value={formData.weight}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       required
@@ -928,8 +956,8 @@ const SellerDashboard = () => {
                     </label>
                     <input
                       type="number"
-                      name="expectedPrice"
-                      value={formData.expectedPrice}
+                      name="price"
+                      value={formData.price}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       required

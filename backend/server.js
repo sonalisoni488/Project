@@ -12,6 +12,7 @@ const transactionRoutes = require('./routes/simpleTransactions');
 const adminRoutes = require('./routes/admin');
 const dashboardRoutes = require('./routes/dashboard');
 const sellerRoutes = require('./routes/seller');
+const buyerRoutes = require('./routes/buyer');
 
 const app = express();
 const PORT = process.env.PORT || 5002;
@@ -58,6 +59,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/waste2res
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/seller', sellerRoutes);
+app.use('/api/buyer', buyerRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/admin', adminRoutes);

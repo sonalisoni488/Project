@@ -21,11 +21,16 @@ const protect = async (req, res, next) => {
     try {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('🔍 JWT decoded:', decoded);
       
       // Get user from token
       const user = await User.findById(decoded.id).select('-password');
+      console.log('🔍 User found:', user ? `${user.name} (${user.email})` : 'NULL');
+      console.log('🔍 User ID from token:', decoded.id);
+      console.log('🔍 User role:', user?.role);
       
       if (!user) {
+        console.log('❌ User not found for ID:', decoded.id);
         return res.status(401).json({ 
           message: 'User not found.' 
         });
@@ -56,18 +61,29 @@ const protect = async (req, res, next) => {
 // Role-based authorization
 const authorize = (...roles) => {
   return (req, res, next) => {
+    console.log('🔍 Authorize check - User role:', req.user?.role);
+    console.log('🔍 Authorize check - Required roles:', roles);
+    console.log('🔍 Authorize check - User exists:', !!req.user);
+    
     if (!req.user) {
+      console.log('❌ No user in request for authorization');
       return res.status(401).json({ 
         message: 'Access denied. Authentication required.' 
       });
     }
 
     if (!roles.includes(req.user.role)) {
+      console.log('❌ Role mismatch:', {
+        userRole: req.user.role,
+        requiredRoles: roles,
+        authorized: roles.includes(req.user.role)
+      });
       return res.status(403).json({ 
         message: `Access denied. ${req.user.role} role is not authorized.` 
       });
     }
 
+    console.log('✅ Authorization passed for role:', req.user.role);
     next();
   };
 };

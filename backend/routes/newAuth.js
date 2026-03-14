@@ -19,4 +19,13 @@ router.post('/login', login);
 // @access  Private
 router.get('/me', protect, getMe);
 
+// @route   POST /api/auth/logout
+// @desc    Logout user (client-side token removal)
+// @access  Private
+router.post('/logout', protect, (req, res) => {
+  res.json({
+    message: 'Logout successful. Please remove the token from client storage.'
+  });
+});
+
 module.exports = router;

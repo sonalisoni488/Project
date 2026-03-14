@@ -80,7 +80,8 @@ const Marketplace = () => {
   // Filter and sort listings
   const filteredListings = listings
     .filter(listing => {
-      const matchesSearch = listing.wasteType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = listing.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           listing.wasteType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            listing.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            listing.location?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || 
@@ -157,7 +158,7 @@ const Marketplace = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search for waste materials..."
+                  placeholder="Search by title, waste type, description, or location..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
@@ -221,7 +222,7 @@ const Marketplace = () => {
         {filteredListings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredListings.map(listing => (
-              <ListingCard key={listing.id} listing={listing} />
+              <ListingCard key={listing._id} listing={listing} />
             ))}
           </div>
         ) : (

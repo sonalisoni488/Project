@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const AuthUser = require('../models/AuthUser');
+const User = require('../models/User');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -33,7 +33,7 @@ const register = async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = await AuthUser.findOne({ email });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       console.log('❌ User already exists:', email);
       return res.status(400).json({
@@ -43,11 +43,12 @@ const register = async (req, res) => {
 
     // Create user
     console.log('👤 Creating new user...');
-    const user = await AuthUser.create({
+    const user = await User.create({
       name,
       email,
       password,
-      role
+      role,
+      location: 'Not specified' // Add default location since User model requires it
     });
 
     console.log('✅ User created successfully:', user._id);
@@ -103,7 +104,7 @@ const login = async (req, res) => {
     }
 
     // Find user and include password for comparison
-    const user = await AuthUser.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
       return res.status(401).json({
@@ -149,7 +150,7 @@ const login = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
   try {
-    const user = await AuthUser.findById(req.user._id);
+    const user = await User.findById(req.user._id);
 
     res.status(200).json({
       user: {

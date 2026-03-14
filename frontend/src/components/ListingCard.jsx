@@ -7,9 +7,13 @@ const ListingCard = ({ listing }) => {
       {/* Image */}
       <div className="h-48 bg-gray-200 relative">
         <img
-          src={listing.image || 'https://via.placeholder.com/400x300?text=Waste+Material'}
+          src={listing.imageUrl || listing.image || 'https://via.placeholder.com/400x300?text=Waste+Material'}
           alt={listing.wasteType}
           className="w-full h-full object-cover"
+          onError={(e) => {
+            console.log('Image failed to load:', listing.imageUrl);
+            e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+          }}
         />
         <div className="absolute top-2 right-2">
           <span className="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
@@ -21,9 +25,14 @@ const ListingCard = ({ listing }) => {
       {/* Content */}
       <div className="p-4">
         <div className="mb-2">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
-            {listing.wasteType}
-          </h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-gray-900">
+              {listing.title || listing.wasteType}
+            </h3>
+            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+              {listing.wasteType}
+            </span>
+          </div>
           <p className="text-sm text-gray-600 line-clamp-2">
             {listing.description}
           </p>
@@ -60,7 +69,7 @@ const ListingCard = ({ listing }) => {
 
         {/* Action Button */}
         <Link
-          to={`/listing/${listing.id}`}
+          to={`/listing/${listing._id}`}
           className="w-full bg-green-600 text-white hover:bg-green-700 text-center py-2 px-4 rounded-md font-medium transition-colors duration-200 inline-block"
         >
           View Details

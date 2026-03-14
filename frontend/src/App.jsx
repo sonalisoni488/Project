@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Marketplace from './pages/Marketplace';
+import ListingDetails from './pages/ListingDetails';
 import SellerDashboard from './pages/SellerDashboard';
 import BuyerDashboard from './pages/BuyerDashboard';
 import SalesAnalytics from './pages/SalesAnalytics';
@@ -23,6 +24,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/listing/:id" element={<ListingDetails />} />
             
             {/* Protected Routes */}
             <Route 
