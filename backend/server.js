@@ -6,13 +6,16 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // Import routes
-const authRoutes = require('./routes/newAuth');
+const authRoutes = require('./routes/auth');
 const listingRoutes = require('./routes/simpleListings');
-const transactionRoutes = require('./routes/simpleTransactions');
+const transactionRoutes = require('./routes/transactions');
 const adminRoutes = require('./routes/admin');
 const dashboardRoutes = require('./routes/dashboard');
 const sellerRoutes = require('./routes/seller');
 const buyerRoutes = require('./routes/buyer');
+const orderRoutes = require('./routes/orders');
+const requestRoutes = require('./routes/requests');
+const chatRoutes = require('./routes/chats');
 
 const app = express();
 const PORT = process.env.PORT || 5002;
@@ -60,6 +63,9 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/waste2res
 app.use('/api/auth', authRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/buyer', buyerRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/requests', requestRoutes);
+app.use('/api/chats', chatRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/admin', adminRoutes);

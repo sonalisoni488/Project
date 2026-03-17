@@ -477,24 +477,37 @@ router.delete('/:id', protect, async (req, res) => {
 // @access   Private (Seller only)
 router.get('/my', protect, authorize('seller'), async (req, res) => {
   try {
+    console.log('🔍 /api/listings/my endpoint called');
+    console.log('🔍 req.user:', req.user);
+    console.log('🔍 req.user._id:', req.user._id);
+    console.log('🔍 req.user._id type:', typeof req.user._id);
+    
     const { page = 1, limit = 10, status } = req.query;
+    console.log('🔍 Query params:', { page, limit, status });
 
     // Build query
     const query = { seller: req.user._id };
+    console.log('🔍 Query object:', query);
+    
     if (status) {
       query.status = status;
     }
 
+    console.log('🔍 About to query Listing.countDocuments...');
     // Get total count
     const total = await Listing.countDocuments(query);
+    console.log('🔍 Total count:', total);
 
+    console.log('🔍 About to query Listing.find...');
     // Get listings
     const listings = await Listing.find(query)
       .sort({ createdAt: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
+    
+    console.log('🔍 Listings found:', listings.length);
 
-    res.json({
+    const response = {
       success: true,
       data: {
         listings,
@@ -505,9 +518,13 @@ router.get('/my', protect, authorize('seller'), async (req, res) => {
           pages: Math.ceil(total / parseInt(limit))
         }
       }
-    });
+    };
+    
+    console.log('🔍 Sending response...');
+    res.json(response);
   } catch (error) {
-    console.error('Get my listings error:', error);
+    console.error('❌ Get my listings error:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Server error while fetching your listings'

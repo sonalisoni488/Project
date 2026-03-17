@@ -1,9 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
+import api from '../services/api';
 import Navbar from '../components/Navbar';
-import { ShoppingCart, TrendingUp, Package, DollarSign, Search, LogOut, Menu, X, Heart, History, User as UserIcon, LineChart } from 'lucide-react';
+import ChatComponent from '../components/ChatComponent';
+import { 
+  ShoppingCart, 
+  TrendingUp, 
+  Package, 
+  DollarSign, 
+  Search, 
+  LogOut, 
+  Menu, 
+  X, 
+  Heart, 
+  History, 
+  User as UserIcon, 
+  LineChart, 
+  MessageSquare,
+  MessageCircle
+} from 'lucide-react';
+import PaymentModal from '../components/PaymentModal';
+import TrackingModal from '../components/TrackingModal';
 
 const BuyerDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -14,12 +32,19 @@ const BuyerDashboard = () => {
   const [purchaseHistory, setPurchaseHistory] = useState([]);
   const [savedListings, setSavedListings] = useState([]);
   const [purchaseAnalytics, setPurchaseAnalytics] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [chats, setChats] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [paymentModal, setPaymentModal] = useState({ isOpen: false, orderId: null, paymentMethod: 'cash_on_delivery' });
+  const [trackingModal, setTrackingModal] = useState({ isOpen: false, order: null });
   
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
+    fetchRequests(); // Load requests as "My Orders"
+    fetchChats(); // Load chats
   }, []);
 
   const fetchDashboardData = async () => {
@@ -35,29 +60,42 @@ const BuyerDashboard = () => {
 
   const fetchOrders = async () => {
     try {
-      // Mock data for now since we don't have orders endpoint
-      setOrders([
-        {
-          id: 1,
-          listingTitle: 'Premium Plastic Bottles',
-          sellerName: 'John Doe',
-          status: 'pending',
-          totalAmount: 150,
-          orderDate: '2026-03-14',
-          estimatedDelivery: '2026-03-16'
-        },
-        {
-          id: 2,
-          listingTitle: 'E-Waste Components',
-          sellerName: 'Jane Smith',
-          status: 'confirmed',
-          totalAmount: 200,
-          orderDate: '2026-03-13',
-          estimatedDelivery: '2026-03-15'
-        }
-      ]);
+      console.log('🔍 Fetching buyer orders...');
+      const response = await api.get('/orders/buyer');
+      console.log('📋 Received buyer orders data:', response.data);
+      setOrders(response.data.data || []);
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('❌ Error fetching buyer orders:', error);
+      console.error('❌ Error response:', error.response?.data);
+      // Set empty array on error to prevent crashes
+      setOrders([]);
+    }
+  };
+
+  const fetchRequests = async () => {
+    try {
+      console.log('🔍 Fetching buyer requests...');
+      const response = await api.get('/requests/buyer');
+      console.log('📋 Received buyer requests data:', response.data);
+      setRequests(response.data.data || []);
+    } catch (error) {
+      console.error('❌ Error fetching buyer requests:', error);
+      console.error('❌ Error response:', error.response?.data);
+      // Set empty array on error to prevent crashes
+      setRequests([]);
+    }
+  };
+
+  const fetchChats = async () => {
+    try {
+      console.log('🔍 Fetching buyer chats...');
+      const response = await api.get('/chats');
+      console.log('📋 Received chats data:', response.data);
+      setChats(response.data.data || []);
+    } catch (error) {
+      console.error('❌ Error fetching chats:', error);
+      console.error('❌ Error response:', error.response?.data);
+      setChats([]);
     }
   };
 
@@ -185,7 +223,13 @@ const BuyerDashboard = () => {
     // Fetch data based on section
     switch(section) {
       case 'orders':
-        fetchOrders();
+        fetchRequests(); // Use requests as orders
+        break;
+      case 'requests':
+        fetchRequests();
+        break;
+      case 'chats':
+        fetchChats();
         break;
       case 'history':
         fetchPurchaseHistory();
@@ -196,6 +240,30 @@ const BuyerDashboard = () => {
       default:
         fetchDashboardData();
     }
+  };
+
+  const handlePayment = async (orderId) => {
+    try {
+      const response = await api.put(`/orders/${orderId}/payment`, {
+        paymentMethod: paymentModal.paymentMethod,
+        paymentId: `PAY-${Date.now()}`
+      });
+
+      if (response.data.success) {
+        alert('Payment processed successfully!');
+        setPaymentModal({ isOpen: false, orderId: null, paymentMethod: 'cash_on_delivery' });
+        fetchOrders(); // Refresh orders
+      } else {
+        alert('Payment failed: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Payment failed. Please try again.');
+    }
+  };
+
+  const handleViewTracking = (order) => {
+    setTrackingModal({ isOpen: true, order });
   };
 
   const handleLogout = () => {
@@ -263,6 +331,30 @@ const BuyerDashboard = () => {
               </button>
               
               <button 
+                onClick={() => handleSectionChange('requests')}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                  activeSection === 'requests' 
+                    ? 'bg-green-50 text-green-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <MessageSquare className="h-5 w-5" />
+                <span>Your Requests</span>
+              </button>
+              
+              <button 
+                onClick={() => handleSectionChange('chats')}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                  activeSection === 'chats' 
+                    ? 'bg-green-50 text-green-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <MessageCircle className="h-5 w-5" />
+                <span>My Chats</span>
+              </button>
+              
+              <button 
                 onClick={() => handleSectionChange('history')}
                 className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
                   activeSection === 'history' 
@@ -313,14 +405,8 @@ const BuyerDashboard = () => {
 
         {/* Main Content */}
         <div className="flex-1 lg:ml-0">
-          {/* Mobile menu button */}
-          <div className="lg:hidden flex items-center justify-between p-4 border-b bg-white">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
+          <Menu className="h-6 w-6" />
+        </div>
             <h1 className="text-xl font-semibold text-gray-900">Buyer Dashboard</h1>
             <div></div>
           </div>
@@ -428,7 +514,7 @@ const BuyerDashboard = () => {
               <>
                 <div className="mb-8">
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Orders</h1>
-                  <p className="text-gray-600">Track your current and pending orders</p>
+                  <p className="text-gray-600">Track your current orders, view product details, and manage payments</p>
                 </div>
                 
                 <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -436,33 +522,147 @@ const BuyerDashboard = () => {
                     <h2 className="text-lg font-semibold text-gray-900">Active Orders</h2>
                   </div>
                   <div className="divide-y divide-gray-200">
-                    {orders.map((order) => (
-                      <div key={order.id} className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-lg font-medium text-gray-900">{order.listingTitle}</h3>
-                            <p className="text-sm text-gray-600">Seller: {order.sellerName}</p>
-                            <p className="text-sm text-gray-600">Order Date: {order.orderDate}</p>
-                            <p className="text-sm text-gray-600">Est. Delivery: {order.estimatedDelivery}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-semibold text-gray-900">${order.totalAmount}</p>
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              order.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {order.status}
-                            </span>
+                    {requests.length === 0 ? (
+                      <div className="text-center py-12">
+                        <ShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">No orders yet</h3>
+                        <p className="mt-1 text-sm text-gray-500">When you send requests, they will appear here</p>
+                      </div>
+                    ) : (
+                      requests.map((request) => (
+                        <div key={request._id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
+                          <div className="flex flex-col lg:flex-row">
+                            {/* Left Side - Request Details */}
+                            <div className="flex-1 p-4">
+                              {/* Header Section */}
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                    <UserIcon className="w-5 h-5 text-white" />
+                                  </div>
+                                  <div>
+                                    <h3 className="text-lg font-bold text-gray-900">{request.listing?.title}</h3>
+                                    <p className="text-xs text-gray-500">Seller: {request.seller?.name}</p>
+                                    <p className="text-xs text-gray-500">{request.seller?.email}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                                    request.status === 'pending' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                                    request.status === 'accepted' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                                    'bg-rose-100 text-rose-800 border border-rose-200'
+                                  }`}>
+                                    {request.status === 'pending' ? '⏳ Pending' : 
+                                     request.status === 'accepted' ? '✅ Order Confirmed' : '❌ Rejected'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Content Section */}
+                              <div className="space-y-3">
+                                {/* Product Details */}
+                                <div className="flex items-center space-x-4">
+                                  {request.listing?.imageUrl && (
+                                    <img
+                                      src={request.listing.imageUrl}
+                                      alt={request.listing.title}
+                                      className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                                    />
+                                  )}
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-gray-900">{request.listing?.title}</h4>
+                                    <p className="text-sm text-gray-600">{request.listing?.description}</p>
+                                    <div className="flex items-center space-x-4 mt-2">
+                                      <span className="text-sm font-medium text-gray-900">Type: {request.listing?.wasteType}</span>
+                                      <span className="text-sm font-medium text-green-600">Price: ${request.offerPrice}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Buyer Message */}
+                                {request.message && (
+                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p className="text-sm font-medium text-blue-900 mb-1">Your Message:</p>
+                                    <p className="text-sm text-blue-700">{request.message}</p>
+                                  </div>
+                                )}
+
+                                {/* Seller Response */}
+                                {request.responseMessage && (
+                                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <p className="text-sm font-medium text-green-900 mb-1">Seller Response:</p>
+                                    <p className="text-sm text-green-700">{request.responseMessage}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               </>
             )}
 
+            {activeSection === 'requests' && (
+              <>
+                <div className="mb-8">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Requests</h1>
+                  <p className="text-gray-600">View your sent requests and seller responses</p>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">Sent Requests</h2>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    {requests.length === 0 ? (
+                      <div className="text-center py-12">
+                        <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">No requests yet</h3>
+                        <p className="mt-1 text-sm text-gray-500">When you send requests, they will appear here</p>
+                      </div>
+                    ) : (
+                      requests.map((request) => (
+                        <div key={request._id} className="p-6 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold text-gray-900">{request.listing?.title}</h3>
+                              <p className="text-gray-600 mt-1">{request.message}</p>
+                              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                  <p className="text-sm text-gray-500">Status</p>
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    request.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                                    request.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {request.status || 'pending'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-500">Offer Price</p>
+                                  <p className="font-medium">${request.offerPrice}</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-500">Seller</p>
+                                  <p className="font-medium">{request.seller?.name}</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-500">Date</p>
+                                  <p className="font-medium">{new Date(request.createdAt).toLocaleDateString()}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
             {activeSection === 'history' && (
               <>
                 <div className="mb-8">
@@ -733,6 +933,218 @@ const BuyerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {paymentModal.isOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={() => setPaymentModal({ isOpen: false, orderId: null, paymentMethod: 'cash_on_delivery' })}></div>
+            
+            <div className="relative bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Complete Payment</h3>
+                <button
+                  onClick={() => setPaymentModal({ isOpen: false, orderId: null, paymentMethod: 'cash_on_delivery' })}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-4">Select your preferred payment method:</p>
+                
+                <div className="space-y-3">
+                  <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cash_on_delivery"
+                      checked={paymentModal.paymentMethod === 'cash_on_delivery'}
+                      onChange={(e) => setPaymentModal({ ...paymentModal, paymentMethod: e.target.value })}
+                      className="mr-3"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-900">Cash on Delivery</p>
+                      <p className="text-sm text-gray-500">Pay when you receive the order</p>
+                    </div>
+                  </label>
+                  
+                  <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="credit_card"
+                      checked={paymentModal.paymentMethod === 'credit_card'}
+                      onChange={(e) => setPaymentModal({ ...paymentModal, paymentMethod: e.target.value })}
+                      className="mr-3"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-900">Credit Card</p>
+                      <p className="text-sm text-gray-500">Pay securely with your credit card</p>
+                    </div>
+                  </label>
+                  
+                  <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="paypal"
+                      checked={paymentModal.paymentMethod === 'paypal'}
+                      onChange={(e) => setPaymentModal({ ...paymentModal, paymentMethod: e.target.value })}
+                      className="mr-3"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-900">PayPal</p>
+                      <p className="text-sm text-gray-500">Pay with your PayPal account</p>
+                    </div>
+                  </label>
+                  
+                  <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="bank_transfer"
+                      checked={paymentModal.paymentMethod === 'bank_transfer'}
+                      onChange={(e) => setPaymentModal({ ...paymentModal, paymentMethod: e.target.value })}
+                      className="mr-3"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-900">Bank Transfer</p>
+                      <p className="text-sm text-gray-500">Direct bank transfer</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPaymentModal({ isOpen: false, orderId: null, paymentMethod: 'cash_on_delivery' })}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handlePayment(paymentModal.orderId)}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Process Payment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tracking Modal */}
+      {trackingModal.isOpen && trackingModal.order && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={() => setTrackingModal({ isOpen: false, order: null })}></div>
+            
+            <div className="relative bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Order Tracking</h3>
+                <button
+                  onClick={() => setTrackingModal({ isOpen: false, order: null })}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Order ID</p>
+                    <p className="font-semibold text-gray-900">{trackingModal.order.orderId}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Status</p>
+                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                      trackingModal.order.status === 'pending' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                      trackingModal.order.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                      trackingModal.order.status === 'processing' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                      trackingModal.order.status === 'shipped' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
+                      trackingModal.order.status === 'delivered' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                      'bg-rose-100 text-rose-800 border border-rose-200'
+                    }`}>
+                      {trackingModal.order.status}
+                    </span>
+                  </div>
+                </div>
+                
+                {trackingModal.order.trackingNumber && (
+                  <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-indigo-700 mb-1">Tracking Number</p>
+                        <p className="text-lg font-mono text-gray-900">{trackingModal.order.trackingNumber}</p>
+                        <p className="text-sm text-gray-600 mt-1">Carrier: {trackingModal.order.shippingCarrier || 'Local Courier'}</p>
+                      </div>
+                      <button
+                        className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+                        onClick={() => window.open(`https://www.google.com/search?q=${trackingModal.order.trackingNumber}`, '_blank')}
+                      >
+                        Track Online
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Order Timeline */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900">Order Timeline</h4>
+                  
+                  {trackingModal.order.orderTimeline && trackingModal.order.orderTimeline.length > 0 ? (
+                    <div className="space-y-3">
+                      {trackingModal.order.orderTimeline.map((event, index) => (
+                        <div key={index} className="flex items-start">
+                          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          </div>
+                          <div className="ml-4 flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium text-gray-900">{event.description}</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(event.timestamp).toLocaleDateString()} {new Date(event.timestamp).toLocaleTimeString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">No timeline events available</p>
+                  )}
+                </div>
+                
+                {/* Estimated Delivery */}
+                {trackingModal.order.estimatedDelivery && (
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center">
+                      <Package className="w-5 h-5 text-blue-600 mr-2" />
+                      <div>
+                        <p className="text-sm font-semibold text-blue-700">Estimated Delivery</p>
+                        <p className="text-gray-900">{new Date(trackingModal.order.estimatedDelivery).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setTrackingModal({ isOpen: false, order: null })}
+                  className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Calendar, Package, DollarSign, User, X, Mail } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import RequestButton from '../components/RequestButton';
 
 const ListingDetails = () => {
   const { id } = useParams();
@@ -13,7 +14,10 @@ const ListingDetails = () => {
   const [error, setError] = useState(null);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
   const [message, setMessage] = useState('');
+  const [offerMessage, setOfferMessage] = useState('');
+  const [offerPrice, setOfferPrice] = useState(0);
 
   console.log('🔍 ListingDetails component mounted with ID:', id);
 
@@ -66,8 +70,43 @@ const ListingDetails = () => {
       return;
     }
     
-    setShowContactModal(true);
-    setMessage(`Hi ${listing.seller?.name}, I'm interested in your listing: "${listing.title}"`);
+    // Show offer modal instead of simple contact
+    setShowOfferModal(true);
+    setOfferMessage(`Hi ${listing.seller?.name}, I'm interested in your listing: "${listing.title}" and would like to make an offer.`);
+    setOfferPrice(listing.price || 0);
+  };
+
+  const handleCloseOfferModal = () => {
+    setShowOfferModal(false);
+    setOfferMessage('');
+    setOfferPrice(0);
+  };
+
+  const handleSendOffer = async () => {
+    try {
+      const offerData = {
+        listingId: listing._id,
+        sellerId: listing.seller?._id,
+        message: offerMessage,
+        offerPrice: offerPrice,
+        buyerName: user?.name,
+        buyerEmail: user?.email
+      };
+
+      console.log('🔍 Sending buyer offer:', offerData);
+      
+      const response = await api.post('/buyer-requests', offerData);
+      
+      if (response.data.success) {
+        alert('Your offer has been sent to the seller!');
+        handleCloseOfferModal();
+      } else {
+        alert('Failed to send offer: ' + response.data.message);
+      }
+    } catch (error) {
+      console.error('❌ Error sending offer:', error);
+      alert('Failed to send offer. Please try again.');
+    }
   };
 
   const handleCloseAuthModal = () => {
@@ -269,12 +308,12 @@ const ListingDetails = () => {
 
               {/* Action Buttons */}
               <div className="flex gap-4">
-                <button
-                  onClick={handleContactSeller}
-                  className="flex-1 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 font-medium transition-colors duration-200"
-                >
-                  Contact Seller
-                </button>
+                <RequestButton
+                  listingId={listing._id}
+                  listingTitle={listing.title}
+                  sellerId={listing.seller?._id}
+                  className="flex-1"
+                />
                 <button
                   onClick={handleBackToMarketplace}
                   className="flex-1 bg-gray-600 text-white py-3 px-4 rounded-md hover:bg-gray-700 font-medium transition-colors duration-200"
@@ -421,6 +460,84 @@ const ListingDetails = () => {
                 className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 font-medium"
               >
                 Sign Up
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Offer Modal */}
+      {showOfferModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Make an Offer</h2>
+              <button
+                onClick={handleCloseOfferModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Offer Details</h3>
+                <p className="text-gray-600">
+                  Send your offer to the seller for this listing
+                </p>
+              </div>
+
+              {/* Listing Info */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h4 className="font-medium text-gray-900 mb-2">{listing.title}</h4>
+                <p className="text-sm text-gray-600">Current Price: ${listing.price}</p>
+                <p className="text-sm text-gray-600">Waste Type: {listing.wasteType}</p>
+              </div>
+
+              {/* Offer Form */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Your Offer Price ($)</label>
+                  <input
+                    type="number"
+                    value={offerPrice}
+                    onChange={(e) => setOfferPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter your offer amount"
+                    min="1"
+                    step="0.01"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Message to Seller</label>
+                  <textarea
+                    value={offerMessage}
+                    onChange={(e) => setOfferMessage(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    rows="4"
+                    placeholder="Tell the seller about your offer..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-6 border-t bg-gray-50">
+              <button
+                onClick={handleCloseOfferModal}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendOffer}
+                className="flex-1 px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 font-medium"
+              >
+                Send Offer
               </button>
             </div>
           </div>
