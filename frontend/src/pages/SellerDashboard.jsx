@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Navbar from '../components/Navbar';
+import ChatComponent from '../components/ChatComponent';
 import {
   Menu,
   X,
@@ -22,7 +23,8 @@ import {
   Tag,
   Image,
   FileText,
-  MessageSquare
+  MessageSquare,
+  MessageCircle
 } from 'lucide-react';
 
 const SellerDashboard = () => {
@@ -33,6 +35,8 @@ const SellerDashboard = () => {
   const [activeSection, setActiveSection] = useState('listings');
   const [responseModal, setResponseModal] = useState({ isOpen: false, requestId: null, status: '', responseMessage: '' });
   const [toast, setToast] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -59,8 +63,14 @@ const SellerDashboard = () => {
       fetchRequests();
     } else if (activeSection === 'analytics') {
       fetchDashboardData();
+    } else if (activeSection === 'chats') {
+      fetchChats();
     }
   }, [activeSection]);
+
+  useEffect(() => {
+    fetchChats(); // Load chats on component mount
+  }, []);
 
 
   const fetchRequests = async () => {
@@ -74,6 +84,19 @@ const SellerDashboard = () => {
       console.error('❌ Error fetching requests:', error);
       console.error('❌ Error response:', error.response?.data);
       setIsLoading(false);
+    }
+  };
+
+  const fetchChats = async () => {
+    try {
+      console.log('🔍 Fetching seller chats...');
+      const response = await api.get('/chats');
+      console.log('📋 Received chats data:', response.data);
+      setChats(response.data.data || []);
+    } catch (error) {
+      console.error('❌ Error fetching chats:', error);
+      console.error('❌ Error response:', error.response?.data);
+      setChats([]);
     }
   };
 
@@ -211,6 +234,14 @@ const SellerDashboard = () => {
               >
                 <TrendingUp className="w-5 h-5" />
                 <span>Analytics</span>
+              </button>
+              <button
+                onClick={() => handleNavigation('chats')}
+                className={`w-full flex items-center space-x-3 text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg px-3 py-2 transition-colors ${activeSection === 'chats' ? 'bg-green-50 text-green-600' : ''
+                  }`}
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>My Chats</span>
               </button>
             </div>
 
@@ -468,6 +499,79 @@ const SellerDashboard = () => {
               </>
             )}
 
+            {activeSection === 'chats' && (
+              <>
+                {/* Page Header */}
+                <div className="mb-8">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-2">My Chats</h1>
+                  <p className="text-gray-600">View your conversations with buyers</p>
+                </div>
+
+                {/* Chats List */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">Active Conversations</h2>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    {chats.length === 0 ? (
+                      <div className="text-center py-12">
+                        <MessageCircle className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">No chats yet</h3>
+                        <p className="mt-1 text-sm text-gray-500">When buyers send requests, chats will appear here</p>
+                      </div>
+                    ) : (
+                      chats.map((chat) => (
+                        <div key={chat._id} className="p-6 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedChat(chat)}>
+                          <div className="flex items-start justify-between">
+                            {/* Left Side - Last Message */}
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold text-gray-900">{chat.listing?.title}</h3>
+                              <p className="text-sm text-gray-600 mt-1">Buyer: {chat.participants.find(p => p._id !== chat.listing?.seller)?.name}</p>
+                              <div className="bg-gray-100 rounded-lg p-4 mt-3 border-l-4 border-blue-400">
+                                <div className="flex items-start space-x-2">
+                                  <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                                    <MessageCircle className="w-3 h-3 text-gray-600" />
+                                  </div>
+                                  <p className="text-sm text-gray-800 flex-1">{chat.lastMessage}</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Right Side - Sender Info + Product Image */}
+                            <div className="flex flex-col items-end space-y-3">
+                              <div className="text-right">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  chat.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {chat.status}
+                                </span>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {new Date(chat.lastMessageAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              
+                              {/* Product Image */}
+                              {chat.listing?.imageUrl ? (
+                                <img
+                                  src={chat.listing.imageUrl}
+                                  alt={chat.listing.title}
+                                  className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                                  <Package className="w-6 h-6 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Other sections can be added here */}
           </div>
         </div>
@@ -523,6 +627,18 @@ const SellerDashboard = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat Modal */}
+      {selectedChat && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="w-full max-w-4xl h-[85vh] max-h-[700px] m-4">
+            <ChatComponent 
+              chatId={selectedChat._id} 
+              onClose={() => setSelectedChat(null)} 
+            />
           </div>
         </div>
       )}

@@ -39,10 +39,20 @@ const Marketplace = () => {
   const fetchListings = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/listings');
+      console.log('🔄 Fetching listings from API...');
       
-      console.log('API Response:', response);
-      console.log('Response data:', response.data);
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000);
+      });
+      
+      const response = await Promise.race([
+        api.get('/listings'),
+        timeoutPromise
+      ]);
+      
+      console.log('✅ API Response received:', response);
+      console.log('✅ Response data:', response.data);
       
       // Handle the exact response structure: {success: true, data: {listings: Array, pagination: {...}}}
       let listingsData = [];
@@ -70,8 +80,24 @@ const Marketplace = () => {
       setListings(availableListings);
       setError(null);
     } catch (error) {
-      console.error('Error fetching listings:', error);
-      setError('Failed to load listings. Please try again later.');
+      console.error('❌ Error fetching listings:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      
+      // Set a more descriptive error message
+      if (error.message === 'Request timeout') {
+        setError('Request timed out. Please check your internet connection and try again.');
+      } else if (error.response?.status === 404) {
+        setError('Marketplace service not found. The server may be down.');
+      } else if (error.response?.status === 500) {
+        setError('Server error. Please try again later.');
+      } else {
+        setError(`Failed to load listings: ${error.message}`);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -94,7 +94,7 @@ const getChatById = async (req, res) => {
 
     // Check if user is participant
     const isParticipant = chat.participants.some(
-      participant => participant.toString() === req.user.id
+      participant => participant._id.toString() === req.user.id
     );
 
     if (!isParticipant) {
