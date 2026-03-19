@@ -2,6 +2,7 @@ const Request = require('../models/Request');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
 const { createChatForRequest } = require('./chatController');
+const { createNotification } = require('./notificationController');
 
 // @desc    Create a new request
 // @route   POST /api/requests
@@ -72,6 +73,16 @@ const createRequest = async (req, res) => {
     });
 
     const savedRequest = await request.save();
+
+    // Create notification for seller about new request
+    await createNotification(
+      listing.seller,
+      'request',
+      'New Request Received',
+      `New request received for your listing: ${listing.title}`,
+      savedRequest._id,
+      'request'
+    );
 
     // Create chat for this request
     const chat = await createChatForRequest(

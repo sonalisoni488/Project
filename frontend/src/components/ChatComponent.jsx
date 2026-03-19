@@ -80,10 +80,10 @@ const ChatComponent = ({ chatId, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] max-h-[700px] flex flex-col m-4">
-        {/* Chat Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-xl">
+        {/* Chat Header - Theme Consistent */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-xl">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -112,8 +112,8 @@ const ChatComponent = ({ chatId, onClose }) => {
           </div>
         </div>
 
-        {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+        {/* Messages Container - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
               <MessageCircle className="w-16 h-16 text-gray-300 mb-4" />
@@ -121,57 +121,55 @@ const ChatComponent = ({ chatId, onClose }) => {
               <p className="text-sm">Start the conversation with a message</p>
             </div>
           ) : (
-            messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.sender._id === user.id ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${
-                  message.sender._id === user.id ? 'flex-row-reverse space-x-reverse' : ''
-                }`}>
-                  {/* Avatar */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    message.sender._id === user.id 
-                      ? 'bg-blue-600 ml-2' 
-                      : 'bg-gray-300 mr-2'
+            messages.map((message, index) => {
+              const isSender = message.sender._id === user._id;
+              
+              // Debug logging
+              console.log('Message alignment debug:', {
+                messageSender: message.sender._id,
+                currentUserId: user._id,
+                isSender: isSender,
+                messageText: message.text
+              });
+              
+              return (
+                <div
+                  key={index}
+                  className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-2`}
+                >
+                  <div className={`max-w-[70%] p-3 rounded-lg ${
+                    isSender 
+                      ? 'bg-white text-gray-800 rounded-br-md shadow-sm border border-gray-300' 
+                      : 'bg-gray-100 text-gray-800 rounded-bl-md shadow-sm border border-gray-200'
                   }`}>
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                  
-                  {/* Message Container */}
-                  <div className="flex flex-col">
-                    {/* Sender Name - Show "You" for current user, name for others */}
-                    {message.sender._id === user.id ? (
-                      <p className="text-xs font-semibold text-gray-600 mb-1">You</p>
-                    ) : (
-                      <p className="text-xs font-semibold text-gray-600 mb-1">{message.sender.name}</p>
-                    )}
-                    
-                    {/* Message Bubble */}
-                    <div className={`px-4 py-2 rounded-2xl ${
-                      message.sender._id === user.id
-                        ? 'bg-blue-600 text-white rounded-br-none'
-                        : 'bg-white text-gray-800 rounded-bl-none shadow-sm'
+                    {/* Sender Name */}
+                    <div className={`text-xs font-medium mb-1 ${
+                      isSender ? 'text-gray-600' : 'text-gray-600'
                     }`}>
-                      <p className="text-sm leading-relaxed">{message.text}</p>
-                      <p className={`text-xs mt-1 ${
-                        message.sender._id === user.id ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
-                        {new Date(message.createdAt).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </p>
+                      {isSender ? 'You' : message.sender.name}
+                    </div>
+                    
+                    {/* Message Text */}
+                    <p className="text-sm leading-relaxed break-words">{message.text}</p>
+                    
+                    {/* Timestamp */}
+                    <div className={`text-xs mt-1 ${
+                      isSender ? 'text-gray-500' : 'text-gray-500'
+                    }`}>
+                      {new Date(message.createdAt).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Message Input */}
+        {/* Message Input - Fixed at Bottom */}
         <div className="p-4 border-t border-gray-200 bg-white rounded-b-xl">
           {chat?.status === 'closed' ? (
             <div className="flex items-center justify-center py-3 px-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -188,17 +186,17 @@ const ChatComponent = ({ chatId, onClose }) => {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type your message..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent pr-12 transition-all"
                   disabled={isLoading}
                 />
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400">
-                  <Send className="w-4 h-4" />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <Send className="w-5 h-5" />
                 </div>
               </div>
               <button
                 type="submit"
                 disabled={!newMessage.trim() || isLoading}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2 shadow-sm hover:shadow-md"
               >
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">Send</span>

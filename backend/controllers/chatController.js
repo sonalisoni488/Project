@@ -2,6 +2,7 @@ const Chat = require('../models/Chat');
 const Request = require('../models/Request');
 const Listing = require('../models/Listing');
 const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // @desc    Create chat when request is created
 // @route   Internal - called by requestController
@@ -169,6 +170,23 @@ const sendMessage = async (req, res) => {
 
     await chat.save();
     console.log('✅ Message sent successfully');
+
+    // Get other participants to notify them
+    const otherParticipants = chat.participants.filter(
+      participant => participant.toString() !== req.user.id
+    );
+
+    // Create notifications for other participants
+    for (const participant of otherParticipants) {
+      await createNotification(
+        participant,
+        'message',
+        'New Message Received',
+        `New message received in chat`,
+        chat._id,
+        'chat'
+      );
+    }
 
     // Populate sender info for response
     await chat.populate('messages.sender', 'name email');

@@ -29,6 +29,7 @@ const BuyerDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [purchaseHistory, setPurchaseHistory] = useState([]);
   const [savedListings, setSavedListings] = useState([]);
+  const [savedListingsLoading, setSavedListingsLoading] = useState(false);
   const [purchaseAnalytics, setPurchaseAnalytics] = useState([]);
   const [requests, setRequests] = useState([]);
   const [chats, setChats] = useState([]);
@@ -99,65 +100,18 @@ const BuyerDashboard = () => {
 
   const fetchPurchaseHistory = async () => {
     try {
-      // Mock data for now
-      const historyData = [
-        {
-          id: 1,
-          listingTitle: 'Metal Scrap',
-          sellerName: 'Bob Wilson',
-          totalAmount: 300,
-          purchaseDate: '2026-03-10',
-          status: 'completed'
-        },
-        {
-          id: 2,
-          listingTitle: 'Paper Waste',
-          sellerName: 'Alice Brown',
-          totalAmount: 100,
-          purchaseDate: '2026-03-08',
-          status: 'completed'
-        },
-        {
-          id: 3,
-          listingTitle: 'Plastic Bottles',
-          sellerName: 'Green Earth Co',
-          totalAmount: 150,
-          purchaseDate: '2026-02-28',
-          status: 'completed'
-        },
-        {
-          id: 4,
-          listingTitle: 'E-Waste Components',
-          sellerName: 'Tech Recycle',
-          totalAmount: 250,
-          purchaseDate: '2026-02-15',
-          status: 'completed'
-        },
-        {
-          id: 5,
-          listingTitle: 'Glass Materials',
-          sellerName: 'Glass Pro',
-          totalAmount: 180,
-          purchaseDate: '2026-01-20',
-          status: 'completed'
-        },
-        {
-          id: 6,
-          listingTitle: 'Organic Waste',
-          sellerName: 'Nature Recycle',
-          totalAmount: 120,
-          purchaseDate: '2025-12-15',
-          status: 'completed'
-        }
-      ];
-
-      setPurchaseHistory(historyData);
-
-      // Generate analytics data from purchase history
-      const analytics = generatePurchaseAnalytics(historyData);
+      console.log('🔍 Fetching purchase history...');
+      const response = await api.get('/purchases/history');
+      console.log('📋 Purchase history response:', response.data);
+      setPurchaseHistory(response.data.data || []);
+      
+      // Generate analytics from real data
+      const analytics = generatePurchaseAnalytics(response.data.data || []);
       setPurchaseAnalytics(analytics);
     } catch (error) {
-      console.error('Error fetching purchase history:', error);
+      console.error('❌ Error fetching purchase history:', error);
+      setPurchaseHistory([]); // Ensure empty array on error
+      setPurchaseAnalytics([]);
     }
   };
 
@@ -188,29 +142,16 @@ const BuyerDashboard = () => {
 
   const fetchSavedListings = async () => {
     try {
-      // Mock data for now
-      setSavedListings([
-        {
-          id: 1,
-          title: 'Organic Waste Materials',
-          sellerName: 'Green Earth Co',
-          price: 50,
-          wasteType: 'Organic',
-          location: 'New York',
-          savedDate: '2026-03-12'
-        },
-        {
-          id: 2,
-          title: 'Glass Bottles Bulk',
-          sellerName: 'Recycle Pro',
-          price: 80,
-          wasteType: 'Glass',
-          location: 'Los Angeles',
-          savedDate: '2026-03-11'
-        }
-      ]);
+      setSavedListingsLoading(true);
+      console.log('🔍 Fetching saved listings...');
+      const response = await api.get('/favorites');
+      console.log('📋 Saved listings response:', response.data);
+      setSavedListings(response.data.data || []);
     } catch (error) {
-      console.error('Error fetching saved listings:', error);
+      console.error('❌ Error fetching saved listings:', error);
+      setSavedListings([]); // Ensure empty array on error
+    } finally {
+      setSavedListingsLoading(false);
     }
   };
 
@@ -576,14 +517,6 @@ const BuyerDashboard = () => {
                                 </div>
                               </div>
 
-                              {/* Buyer Message */}
-                              {request.message && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                  <p className="text-sm font-medium text-blue-900 mb-1">Your Message:</p>
-                                  <p className="text-sm text-blue-700">{request.message}</p>
-                                </div>
-                              )}
-
                               {/* Seller Response */}
                               {request.responseMessage && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -626,7 +559,6 @@ const BuyerDashboard = () => {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-gray-900">{request.listing?.title}</h3>
-                            <p className="text-gray-600 mt-1">{request.message}</p>
                             <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                               <div>
                                 <p className="text-sm text-gray-500">Status</p>
@@ -819,53 +751,68 @@ const BuyerDashboard = () => {
                   <h2 className="text-lg font-semibold text-gray-900">Completed Purchases</h2>
                 </div>
                 <div className="divide-y divide-gray-200">
-                  {purchaseHistory.map((purchase) => (
-                    <div key={purchase.id} className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900">{purchase.listingTitle}</h3>
-                          <p className="text-sm text-gray-600">Seller: {purchase.sellerName}</p>
-                          <p className="text-sm text-gray-600">Purchase Date: {purchase.purchaseDate}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-semibold text-gray-900">${purchase.totalAmount}</p>
-                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            {purchase.status}
-                          </span>
+                  {purchaseHistory.length === 0 ? (
+                    <div className="text-center py-12">
+                      <History className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No purchase history yet</h3>
+                      <p className="mt-1 text-sm text-gray-500">Your completed purchases will appear here</p>
+                    </div>
+                  ) : (
+                    purchaseHistory.map((purchase) => (
+                      <div key={purchase.id} className="p-6 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-medium text-gray-900">{purchase.listing?.title || purchase.listingTitle}</h3>
+                            <p className="text-sm text-gray-600">Seller: {purchase.sellerName}</p>
+                            <p className="text-sm text-gray-600">Purchase Date: {new Date(purchase.purchaseDate).toLocaleDateString()}</p>
+                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div>
+                                <p className="text-sm text-gray-500">Type</p>
+                                <p className="font-medium">{purchase.listing?.wasteType}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">Quantity</p>
+                                <p className="font-medium">{purchase.quantity} kg</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">Unit Price</p>
+                                <p className="font-medium">${purchase.unitPrice}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">Payment</p>
+                                <p className="font-medium">{purchase.paymentMethod?.replace('_', ' ')}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end space-y-3">
+                            {purchase.listing?.imageUrl ? (
+                              <img
+                                src={purchase.listing.imageUrl}
+                                alt={purchase.listing.title}
+                                className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                              />
+                            ) : (
+                              <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                                <Package className="w-8 h-8 text-gray-400" />
+                              </div>
+                            )}
+                            <div className="text-right">
+                              <p className="text-lg font-semibold text-gray-900">${purchase.totalAmount}</p>
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                purchase.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                purchase.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                                purchase.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {purchase.status}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
-              </div>
-            </>
-          )}
-
-          {activeSection === 'saved' && (
-            <>
-              <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Saved Listings</h1>
-                <p className="text-gray-600">Manage your favorite and saved listings</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {savedListings.map((listing) => (
-                  <div key={listing.id} className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="h-48 bg-gray-200"></div>
-                    <div className="p-4">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{listing.title}</h3>
-                      <p className="text-sm text-gray-600 mb-2">Seller: {listing.sellerName}</p>
-                      <p className="text-sm text-gray-600 mb-2">Type: {listing.wasteType}</p>
-                      <p className="text-sm text-gray-600 mb-2">Location: {listing.location}</p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-lg font-bold text-green-600">${listing.price}</p>
-                        <button className="text-red-600 hover:text-red-800">
-                          <Heart className="h-5 w-5 fill-current" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
             </>
           )}
@@ -929,6 +876,77 @@ const BuyerDashboard = () => {
                             ) : (
                               <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
                                 <Package className="w-6 h-6 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeSection === 'saved' && (
+            <>
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Saved Listings</h1>
+                <p className="text-gray-600">View your favorite waste material listings</p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900">Your Saved Items</h2>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {savedListingsLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                      <p className="mt-2 text-sm text-gray-600">Loading saved listings...</p>
+                    </div>
+                  ) : savedListings.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Heart className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No saved listings yet</h3>
+                      <p className="mt-1 text-sm text-gray-500">Start exploring and save your favorite listings</p>
+                    </div>
+                  ) : (
+                    savedListings.map((listing) => (
+                      <div key={listing._id} className="p-6 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">{listing.title}</h3>
+                            <p className="text-sm text-gray-600 mt-1">Seller: {listing.seller?.name}</p>
+                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div>
+                                <p className="text-sm text-gray-500">Type</p>
+                                <p className="font-medium">{listing.wasteType}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">Weight</p>
+                                <p className="font-medium">{listing.weight} kg</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">Price</p>
+                                <p className="font-medium">${listing.price}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">Location</p>
+                                <p className="font-medium">{listing.location}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            {listing.imageUrl ? (
+                              <img
+                                src={listing.imageUrl}
+                                alt={listing.title}
+                                className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                              />
+                            ) : (
+                              <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                                <Package className="w-8 h-8 text-gray-400" />
                               </div>
                             )}
                           </div>

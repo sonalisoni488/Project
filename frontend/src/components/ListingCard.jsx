@@ -1,9 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Heart } from 'lucide-react';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const ListingCard = ({ listing }) => {
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Check if listing is already favorited
+    checkFavoriteStatus();
+  }, [listing._id, user]);
+
+  const checkFavoriteStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const response = await api.get(`/favorites/check/${listing._id}`);
+      setIsFavorited(response.data.isFavorited);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+    }
+  };
+
+  const toggleFavorite = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) {
+      alert('Please login to save listings');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      if (isFavorited) {
+        // Remove from favorites
+        await api.delete(`/favorites/${listing._id}`);
+        setIsFavorited(false);
+      } else {
+        // Add to favorites
+        await api.post('/favorites', { listingId: listing._id });
+        setIsFavorited(true);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert('Failed to save listing. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+    <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden relative">
       {/* Image */}
       <div className="h-48 bg-gray-200 relative">
         <img
@@ -15,7 +67,25 @@ const ListingCard = ({ listing }) => {
             e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
           }}
         />
-        <div className="absolute top-2 right-2">
+        
+        {/* Heart Icon - Top Right Corner */}
+        <button
+          onClick={toggleFavorite}
+          disabled={isLoading}
+          className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-200 ${
+            isFavorited 
+              ? 'bg-red-500 text-white hover:bg-red-600' 
+              : 'bg-white text-gray-400 hover:text-red-500 hover:bg-gray-100'
+          } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} shadow-md`}
+          title={isFavorited ? 'Remove from saved' : 'Save to favorites'}
+        >
+          <Heart 
+            className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} 
+          />
+        </button>
+
+        {/* Status Badge */}
+        <div className="absolute top-2 left-2">
           <span className="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
             {listing.status || 'Available'}
           </span>

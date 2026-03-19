@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 // Import routes
@@ -68,6 +70,9 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/favorites', require('./routes/favorites'));
+app.use('/api/purchases', require('./routes/purchases'));
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
@@ -93,7 +98,37 @@ app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-app.listen(PORT, () => {
+// Create HTTP server and setup Socket.io
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://yourdomain.com'] 
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'],
+    methods: ['GET', 'POST']
+  }
+});
+
+// Make io globally available
+global.io = io;
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('User connected to notifications:', socket.id);
+  
+  // Join user to their personal room for targeted notifications
+  socket.on('join', (userId) => {
+    socket.join(userId.toString());
+    console.log(`User ${userId} joined their notification room`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected from notifications:', socket.id);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log('Socket.io server started for real-time notifications');
 });
