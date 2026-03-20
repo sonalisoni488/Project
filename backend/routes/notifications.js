@@ -6,6 +6,9 @@ const notificationController = require('../controllers/notificationController');
 // Protect all routes
 router.use(protect);
 
+// Create notification (for testing)
+router.post('/', notificationController.createNotificationAPI);
+
 // Get notifications
 router.get('/', notificationController.getNotifications);
 

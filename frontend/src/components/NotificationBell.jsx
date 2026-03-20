@@ -122,7 +122,8 @@ const NotificationBell = () => {
   };
 
   return (
-    <div className="relative">
+    <>
+      <div className="relative">
       {/* Bell Icon with Badge */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -217,13 +218,14 @@ const NotificationBell = () => {
                       </button>
                     </div>
                   </div>
+                </div>
                 ))
               )}
             </div>
           </div>
-        </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

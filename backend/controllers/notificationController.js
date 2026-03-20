@@ -35,6 +35,44 @@ exports.createNotification = async (userId, type, title, message, referenceId = 
   }
 };
 
+// Create notification (for testing)
+exports.createNotificationAPI = async (req, res) => {
+  try {
+    const { user, type, title, message, referenceId, referenceType } = req.body;
+
+    // Validate required fields
+    if (!user || !type || !title || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'User, type, title, and message are required'
+      });
+    }
+
+    // Validate type
+    const validTypes = ['request', 'message', 'status', 'order'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid type. Must be one of: request, message, status, order'
+      });
+    }
+
+    const notification = await exports.createNotification(user, type, title, message, referenceId, referenceType);
+
+    res.status(201).json({
+      success: true,
+      data: notification
+    });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create notification',
+      error: error.message
+    });
+  }
+};
+
 // Get user notifications
 exports.getNotifications = async (req, res) => {
   try {
