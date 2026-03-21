@@ -4,13 +4,20 @@ const {
   createRequest,
   getBuyerRequests,
   getSellerRequests,
-  updateRequestStatus
+  updateRequestStatus,
+  getRequestById,
+  createTestRequest
 } = require('../controllers/requestController');
 
 const router = express.Router();
 
 // Apply authentication middleware to all routes
 router.use(protect);
+
+// @route   POST /api/requests/test
+// @desc    Create a test request for notification testing
+// @access  Private (buyer only)
+router.post('/test', authorize('buyer'), createTestRequest);
 
 // @route   POST /api/requests
 // @desc    Create a new request
@@ -26,6 +33,11 @@ router.get('/buyer', authorize('buyer'), getBuyerRequests);
 // @desc    Get requests for seller
 // @access  Private (seller only)
 router.get('/seller', authorize('seller'), getSellerRequests);
+
+// @route   GET /api/requests/:id
+// @desc    Get specific request by ID
+// @access  Private
+router.get('/:id', getRequestById);
 
 // @route   PUT /api/requests/:id/status
 // @desc    Update request status (accept/reject)

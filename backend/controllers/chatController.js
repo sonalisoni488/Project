@@ -178,13 +178,19 @@ const sendMessage = async (req, res) => {
 
     // Create notifications for other participants
     for (const participant of otherParticipants) {
+      // Get sender role (buyer or seller)
+      const senderUser = await User.findById(req.user.id);
+      const senderRole = senderUser.role || 'user';
+      
       await createNotification(
         participant,
         'message',
         'New Message Received',
-        `New message received in chat`,
+        `New message from ${senderUser.name}`,
         chat._id,
-        'chat'
+        'chat',
+        req.user.id,
+        senderRole
       );
     }
 

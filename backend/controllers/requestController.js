@@ -81,7 +81,9 @@ const createRequest = async (req, res) => {
       'New Request Received',
       `New request received for your listing: ${listing.title}`,
       savedRequest._id,
-      'request'
+      'request',
+      req.user.id,
+      'buyer'
     );
 
     // Create chat for this request
@@ -171,6 +173,108 @@ const getSellerRequests = async (req, res) => {
   }
 };
 
+// Create a test request for notification testing
+exports.createTestRequest = async (req, res) => {
+  try {
+    const { title, message, listingId } = req.body;
+    const userId = req.user.id;
+
+    // Get listing details
+    const Listing = require('../models/Listing');
+    const listing = await Listing.findById(listingId);
+    
+    if (!listing) {
+      return res.status(404).json({
+        success: false,
+        message: 'Listing not found'
+      });
+    }
+
+    // Create test request
+    const Request = require('../models/Request');
+    const request = new Request({
+      buyer: userId,
+      seller: listing.seller,
+      listing: listingId,
+      message: message || 'Test request for notification system',
+      status: 'pending'
+    });
+
+    await request.save();
+
+    // Populate for response
+    const populatedRequest = await Request.findById(request._id)
+      .populate('buyer', 'name email')
+      .populate('seller', 'name email')
+      .populate('listing', 'title price imageUrl');
+
+    // Create notification for seller
+    const { createNotification } = require('./notificationController');
+    await createNotification(
+      listing.seller,
+      'request',
+      title || 'New Test Request',
+      message || 'Test request created for notification testing',
+      request._id,
+      'request',
+      userId,
+      'buyer'
+    );
+
+    res.status(201).json({
+      success: true,
+      data: populatedRequest
+    });
+  } catch (error) {
+    console.error('Error creating test request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create test request',
+      error: error.message
+    });
+  }
+};
+
+// Get specific request by ID
+const getRequestById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const request = await Request.findById(id)
+      .populate('buyer', 'name email')
+      .populate('seller', 'name email')
+      .populate('listing', 'title price imageUrl wasteType quantity description location');
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Request not found'
+      });
+    }
+
+    // Check if user is authorized to view this request
+    if (request.buyer._id.toString() !== userId && request.seller._id.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view this request'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: request
+    });
+  } catch (error) {
+    console.error('Error fetching request:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch request',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Update request status (accept/reject)
 // @route   PUT /api/requests/:id/status
 // @access  Private (seller only)
@@ -241,5 +345,7 @@ module.exports = {
   createRequest,
   getBuyerRequests,
   getSellerRequests,
-  updateRequestStatus
+  updateRequestStatus,
+  getRequestById,
+  createTestRequest
 };

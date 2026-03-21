@@ -6,6 +6,11 @@ const notificationSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  sender: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  },
   type: {
     type: String,
     enum: ['request', 'message', 'status', 'order'],
@@ -26,6 +31,15 @@ const notificationSchema = new mongoose.Schema({
   referenceType: {
     type: String,
     enum: ['request', 'chat', 'listing', 'order'],
+    required: false
+  },
+  senderName: {
+    type: String,
+    required: false
+  },
+  senderRole: {
+    type: String,
+    enum: ['buyer', 'seller'],
     required: false
   },
   isRead: {

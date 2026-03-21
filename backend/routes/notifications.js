@@ -1,27 +1,54 @@
 const express = require('express');
-const router = express.Router();
 const { protect } = require('../middleware/auth');
-const notificationController = require('../controllers/notificationController');
+const router = express.Router();
 
-// Protect all routes
+// Import controller
+const {
+  createNotificationAPI,
+  getNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  getSampleData
+} = require('../controllers/notificationController');
+
+// Apply authentication to all routes
 router.use(protect);
 
-// Create notification (for testing)
-router.post('/', notificationController.createNotificationAPI);
+// @route   POST /api/notifications
+// @desc    Create notification (for testing)
+// @access  Private
+router.post('/', createNotificationAPI);
 
-// Get notifications
-router.get('/', notificationController.getNotifications);
+// @route   GET /api/notifications/sample
+// @desc    Get sample data for testing
+// @access  Private
+router.get('/sample', getSampleData);
 
-// Get unread count
-router.get('/unread-count', notificationController.getUnreadCount);
+// @route   GET /api/notifications
+// @desc    Get user notifications
+// @access  Private
+router.get('/', getNotifications);
 
-// Mark as read
-router.put('/:id/read', notificationController.markAsRead);
+// @route   GET /api/notifications/unread
+// @desc    Get unread count
+// @access  Private
+router.get('/unread', getUnreadCount);
 
-// Mark all as read
-router.put('/read-all', notificationController.markAllAsRead);
+// @route   PUT /api/notifications/:id/read
+// @desc    Mark notification as read
+// @access  Private
+router.put('/:id/read', markAsRead);
 
-// Delete notification
-router.delete('/:id', notificationController.deleteNotification);
+// @route   PUT /api/notifications/read-all
+// @desc    Mark all notifications as read
+// @access  Private
+router.put('/read-all', markAllAsRead);
+
+// @route   DELETE /api/notifications/:id
+// @desc    Delete notification
+// @access  Private
+router.delete('/:id', deleteNotification);
 
 module.exports = router;
